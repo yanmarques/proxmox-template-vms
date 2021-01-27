@@ -1,0 +1,69 @@
+#!/bin/sh
+set -e
+
+# only executes when we are on the client
+if [ ! -b /dev/sda ]; then
+	exit 0
+fi
+
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 USER"
+	exit 1
+fi	
+
+# input argument
+user="$1"
+
+setup_vm_disk() {
+	# create user home directory
+	mkdir -p /rw/home
+	cp -r /etc/skel/ /rw/home/"$user"	
+	chown -R "$user":"$user" /rw/home/"$user"
+
+	# configuration files
+	# gives user full control over the installation
+	mkdir -p /rw/config || true
+	mkdir -p /rw/binds || true
+
+	if [ ! -f /rw/config/rc.local ]; then
+		echo -e '#!/bin/bash\n# Start commands at startup' > /rw/config/rc.local
+	fi
+}
+
+bind_files() {
+	for file in "$(ls $1)"; do
+		# avoid an infinite loop
+		if [ -z "$file" ]; then
+			break
+		fi
+
+		local path="${1%/}/$file"
+		if [ -d "$path" ]; then
+		       bind_files "$path"
+	        else
+			local target_file="${path#/rw/binds}"
+			mount --bind "$path" "$target_file"
+		fi    
+	done
+}
+
+handle_user_config() {
+	bind_files /rw/binds
+	bash /rw/config/rc.local
+}
+
+# is the block device already formatted?
+# no, so format it and configure it's contents
+if ! blkid /dev/sda; then
+	echo 'type=83' | sfdisk /dev/sda
+	mkfs.ext4 /dev/sda1
+	mkdir /rw/
+	mount /dev/sda1 /rw/
+	setup_vm_disk
+else
+	mkdir /rw/
+	mount /dev/sda1 /rw/
+fi
+
+mount --bind /rw/home/"$user" /home/"$user"
+handle_user_config

@@ -1,0 +1,9 @@
+[Unit]
+Description=Maybe start template vm
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/maybe-start-template-vm %i
+
+[Install]
+WantedBy=multi-user.target
