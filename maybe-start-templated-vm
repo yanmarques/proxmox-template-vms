@@ -1,8 +1,11 @@
 #!/bin/sh
 set -e
 
+# global vars
+templated_dev=/dev/sda
+
 # only executes when we are on the client
-if [ ! -b /dev/sda ]; then
+if [ ! -b "$templated_dev" ]; then
 	exit 0
 fi
 
@@ -14,6 +17,7 @@ fi
 # input argument
 user="$1"
 
+# configures default files on client disk
 setup_vm_disk() {
 	# create user home directory
 	mkdir -p /rw/home
@@ -27,14 +31,30 @@ setup_vm_disk() {
 
 	# configuration files
 	# gives user full control over the installation
-	mkdir -p /rw/config || true
-	mkdir -p /rw/binds || true
+	mkdir -p /rw/config
+	mkdir -p /rw/binds
 
 	if [ ! -f /rw/config/rc.local ]; then
-		echo -e '#!/bin/bash\n# Start commands at startup' > /rw/config/rc.local
+		cat <<EOF > /rw/config/rc.local
+#!/bin/bash
+# Put commands to execute with systemd service.
+# Eg.: systemctl start openvpn-client
+
+EOF 
 	fi
 }
 
+# given a root directory, mount every file to the root filesystem
+#
+# imagine the following file structure:
+# /rw/binds
+# └── etc
+#     └── wireguard
+#         └── wg0.conf
+#
+# now, the file /rw/binds/etc/wireguard/wg0.conf would be
+# mounted at /etc/wireguard/wg0.conf
+# 
 bind_files() {
 	for file in "$(ls $1)"; do
 		# avoid an infinite loop
@@ -52,6 +72,7 @@ bind_files() {
 	done
 }
 
+# execute this at startup
 handle_user_config() {
 	bind_files /rw/binds
 	bash /rw/config/rc.local
@@ -59,10 +80,15 @@ handle_user_config() {
 
 # is the block device already formatted?
 # no, so format it and configure it's contents
+if ! blkid "$templated_dev"; then
+	echo 'type=83' | sfdisk "$templated_dev"
+	mkfs.ext4 "$templated_dev"1
 	mkdir -p /rw/
+	mount "$templated_dev"1 /rw/
 	setup_vm_disk
 else
 	mkdir -p /rw/
+	mount "$templated_dev"1 /rw/
 fi
 
 mount --bind /rw/home/ /home/
