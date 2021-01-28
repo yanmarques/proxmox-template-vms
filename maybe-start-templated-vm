@@ -59,15 +59,10 @@ handle_user_config() {
 
 # is the block device already formatted?
 # no, so format it and configure it's contents
-if ! blkid /dev/sda; then
-	echo 'type=83' | sfdisk /dev/sda
-	mkfs.ext4 /dev/sda1
-	mkdir /rw/
-	mount /dev/sda1 /rw/
+	mkdir -p /rw/
 	setup_vm_disk
 else
-	mkdir /rw/
-	mount /dev/sda1 /rw/
+	mkdir -p /rw/
 fi
 
 mount --bind /rw/home/ /home/
