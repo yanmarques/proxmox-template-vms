@@ -10,7 +10,8 @@ if [ $# -ne 1 ]; then
     usage
 fi
 
-source add-template-to-vm
+# read local script variables
+source ./add-template-to-vm
 
 case "$1" in
     install)

@@ -44,7 +44,7 @@ main() {
 }
 
 # detects when being executed as subshell,
-# not a source from install.sh file
+# not a source from manage.sh file
 if [ "$0" != "manage.sh" ]; then
 	main "$@"
 fi
