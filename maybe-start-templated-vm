@@ -80,7 +80,7 @@ handle_user_config() {
 
 # is the block device already formatted?
 # no, so format it and configure it's contents
-if ! blkid "$templated_dev"; then
+if ! blkid "$templated_dev" > /dev/null; then
 	echo 'type=83' | sfdisk "$templated_dev"
 	mkfs.ext4 "$templated_dev"1
 	mkdir -p /rw/
