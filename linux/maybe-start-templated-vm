@@ -39,8 +39,7 @@ setup_vm_disk() {
 #!/bin/bash
 # Put commands to execute with systemd service.
 # Eg.: systemctl start openvpn-client
-
-EOF 
+EOF
 	fi
 }
 
@@ -65,8 +64,13 @@ bind_files() {
 		local path="${1%/}/$file"
 		if [ -d "$path" ]; then
 		       bind_files "$path"
-	        else
+	    else
 			local target_file="${path#/rw/binds}"
+
+			# ensure directory exists
+			mkdir -p "$(dirname $target_file)"
+
+			# then bind mount
 			mount --bind "$path" "$target_file"
 		fi    
 	done
