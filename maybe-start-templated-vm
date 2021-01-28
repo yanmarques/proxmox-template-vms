@@ -20,6 +20,11 @@ setup_vm_disk() {
 	cp -r /etc/skel/ /rw/home/"$user"	
 	chown -R "$user":"$user" /rw/home/"$user"
 
+	# maybe restore SELinux security context
+	if command -v restorecon &> /dev/null; then
+		restorecon -R /rw/home
+	fi
+
 	# configuration files
 	# gives user full control over the installation
 	mkdir -p /rw/config || true
@@ -65,5 +70,5 @@ else
 	mount /dev/sda1 /rw/
 fi
 
-mount --bind /rw/home/"$user" /home/"$user"
+mount --bind /rw/home/ /home/
 handle_user_config
