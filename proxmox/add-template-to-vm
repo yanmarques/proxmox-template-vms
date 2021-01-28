@@ -1,0 +1,50 @@
+#!/bin/sh
+set -e
+
+# environment vars
+storage=${TEMPLATED_HOOK_STORAGE:-local-hooks}
+node=${TEMPLATED_NODE:-pve}
+
+# global vars
+# NO NEED TO CHANGE THIS
+hooks_storage="/var/lib/$node${storage#local}/snippets"
+hook_name=templated-hook.py
+
+main() {
+	if [ $# -ne 2 ]; then
+		echo "Usage: $0 VMID TEMPLATE_VMID"
+		exit 1
+	fi
+
+	# input arguments
+	local vmid="$1"
+	local template_vmid="$2"
+
+	# runtime vars
+	local vm_config="$hooks_storage/config/$vmid.conf"
+
+	if [ -f "$vm_config" ]; then
+		echo "[+] an existing configuration exists at: $vm_config"
+		echo "[?] replace existing configuration? [N/y]"
+		read choice
+		case "$choice" in
+			n|N)
+				exit 2
+				;;
+		esac
+	fi
+
+	echo "[+] writing custom configuration"
+	echo "template_vmid: $template_vmid" > "$vm_config"
+
+	echo "[+] writing vm hookscript"
+	pvesh set "/nodes/$node/qemu/$vmid/config" -hookscript "$storage:snippets/$hook_name" > /dev/null
+
+	echo "[+] done"
+}
+
+# detects when being executed as subshell,
+# not a source from install.sh file
+if [ "$0" != "manage.sh" ]; then
+	main "$@"
+fi
