@@ -3,7 +3,7 @@ Description=Maybe start template vm
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/maybe-start-template-vm %i
+ExecStart=/usr/sbin/maybe-start-templated-vm %i
 
 [Install]
 WantedBy=multi-user.target
