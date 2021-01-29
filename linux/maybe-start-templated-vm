@@ -67,11 +67,14 @@ bind_files() {
 	    else
 			local target_file="${path#/rw/binds}"
 
+			# ensure it is an absolute path to the filesystem
+			target_file="/${target_file#/}"
+
 			# ensure directory exists
 			mkdir -p "$(dirname $target_file)"
 
-			# then bind mount
-			mount --bind "$path" "$target_file"
+			# then copy it
+			cp -p "$path" "$target_file"
 		fi    
 	done
 }
