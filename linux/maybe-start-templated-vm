@@ -25,7 +25,7 @@ setup_vm_disk() {
 	chown -R "$user":"$user" /rw/home/"$user"
 
 	# maybe restore SELinux security context
-	if command -v restorecon &> /dev/null; then
+	if command -v restorecon > /dev/null 2>&1; then
 		restorecon -R /rw/home
 	fi
 
