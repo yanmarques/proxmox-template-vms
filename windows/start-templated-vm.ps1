@@ -29,7 +29,7 @@ if ($isRaw) {
 $vol = $targetDisk | Get-Partition | Get-Volume
 
 # get full drive directory
-$winVolume = Get-WmiObject -class Win32_Volume | Where DeviceID -eq $vol.Path
+$winVolume = Get-WmiObject -Class Win32_Volume | Where DeviceID -eq $vol.Path
 $directory = $winVolume.Name
 
 # calculate some file paths
