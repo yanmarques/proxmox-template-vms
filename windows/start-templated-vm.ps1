@@ -41,6 +41,9 @@ $directory = $winVolume.Name
 
 # calculate some file paths
 $usersDir = Join-Path -Path $directory -ChildPath Users
+$userFromPath = Split-Path -Path $defaultUserPath -Leaf
+$theUserDir = Join-Path -Path $usersDir -ChildPath $userFromPath
+
 $configDir = Join-Path -Path $directory -ChildPath Config
 $startupFile = Join-Path -Path $configDir -ChildPath "Startup.ps1"
 
@@ -52,7 +55,7 @@ if ($isRaw) {
     # /E - copy directories and subdirectories
     # /C - continue even when something failed
     # /Q - quiet
-    Invoke-Command -ScriptBlock {xcopy $defaultUserPath $usersDir /I /H /E /C /Q}
+    Invoke-Command -ScriptBlock {xcopy $defaultUserPath $theUserDir /I /H /E /C /Q}
 
     # create config directory
     New-Item -Path $configDir -ItemType Directory
@@ -67,9 +70,7 @@ if (Test-Path -Path $defaultUserPath) {
 }
 
 # create symbolic link to user directory
-$userFromPath = Split-Path -Path $defaultUserPath -Leaf
-$userRealPath = Join-Path -Path $usersDir -ChildPath $userFromPath
-New-Item -Path $defaultUserPath -ItemType SymbolicLink -Value $userRealPath
+New-Item -Path $defaultUserPath -ItemType SymbolicLink -Value $theUserDir
 
 # run user startup script
 Invoke-Command -ScriptBlock {powershell $startupFile}
