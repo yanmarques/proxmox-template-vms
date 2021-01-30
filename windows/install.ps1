@@ -1,18 +1,27 @@
 # global vars
 $serviceName = "Start templated"
+$scriptFile = "start-templated-vm.ps1"
 
-# retrieve service binary path
-# maybe this is easiest and more stable way to do
-$psPath = Join-Path -Path $PSScriptRoot -ChildPath start-templated-vm.ps1
+# app directory, it's easier to find our powershell script
+$appDirectory = $PSScriptRoot
 
-# remove any existing service
-Invoke-Command -ScriptBlock {nssm remove $serviceName confirm}
+# escape our powershell path with double quotes
+$appParams = "-ExecutionPolicy Bypass -NoProfile -File $scriptFile"
 
-# get absolute path powershell.exe
+# powershell.exe absolute path
 $psWinPath= (Get-Command powershell).Source
 
-# service arguments with our ps1
-$args = '-ExecutionPolicy Bypass -NoProfile -File "{0}"' -f $psPath
+# nssm absolute path
+$nssm = (Get-Command nssm).Source
+
+# remove any existing service
+& $nssm stop $serviceName confirm
+& $nssm remove $serviceName confirm
 
 # install service
-Invoke-Command -ScriptBlock {nssm install $serviceName $psWinPath $args}
+& $nssm install $serviceName $psWinPath
+
+# set the shiny diamond
+& $nssm set $serviceName AppDirectory $appDirectory
+& $nssm set $serviceName AppParameters $appParams
+& $nssm set $serviceName Start SERVICE_AUTO_START

@@ -4,9 +4,16 @@ $defaultUserPath = "C:\Users\Administrator"
 # fetch every disk
 $disks = Get-Disk
 
+# calls nssm to stop our service since we have no clue to continue running
+# it must be called when this script finishes
+function StopService {
+    $nssm = (Get-Command nssm).Source
+    & $nssm stop "Start templated"
+}
+
 # ensure we are on a template-based vm
 if ($disks.Count -lt 2) {
-    Write-Output "Skipping, we are on template vm"
+    StopService
     exit 0
 }
 
@@ -66,3 +73,5 @@ New-Item -Path $defaultUserPath -ItemType SymbolicLink -Value $userRealPath
 
 # run user startup script
 Invoke-Command -ScriptBlock {powershell $startupFile}
+
+StopService
