@@ -1,17 +1,18 @@
 # global vars
-$name = "Start templated"
+$serviceName = "Start templated"
 
 # retrieve service binary path
 # maybe this is easiest and more stable way to do
 $psPath = Join-Path -Path $PSScriptRoot -ChildPath start-templated-vm.ps1
 
-# try to get any existing service with our name
-$oldService = Get-WmiObject -Class Win32_Service -Filter "Name='$name'"
+# remove any existing service
+Invoke-Command -ScriptBlock {nssm remove $serviceName confirm}
 
-# maybe remove it
-if ($oldService -ne $null) {
-    $oldService.Delete()
-}
+# get absolute path powershell.exe
+$psWinPath= (Get-Command powershell).Source
 
-# register the templated service
-New-Service -Name $name -BinaryPathName "powershell.exe -File $psPath"
+# service arguments with our ps1
+$args = '-ExecutionPolicy Bypass -NoProfile -File "{0}"' -f $psPath
+
+# install service
+Invoke-Command -ScriptBlock {nssm install $serviceName $psWinPath $args}
