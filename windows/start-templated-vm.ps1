@@ -1,12 +1,12 @@
 # global vars
-$defaultUserPath = "C:\Users\test"
+$defaultUserPath = "C:\Users\Administrator"
 
 # fetch every disk
 $disks = Get-Disk
 
 # ensure we are on a template-based vm
 if ($disks.Count -lt 2) {
-    "Skipping, we are on template vm"
+    Write-Output "Skipping, we are on template vm"
     exit 0
 }
 
