@@ -9,7 +9,7 @@ $psPath = Join-Path -Path $PSScriptRoot -ChildPath start-templated-vm.ps1
 $oldService = Get-WmiObject -Class Win32_Service -Filter "Name='$name'"
 
 # maybe remove it
-if ($oldService -neq $null) {
+if ($oldService -ne $null) {
     $oldService.Delete()
 }
 
