@@ -43,13 +43,19 @@ $startupFile = Join-Path -Path $configDir -ChildPath "Startup.ps1"
 
 # first time configuration
 if ($isRaw) {
+    # create a file containing the files to exclude
+    #
+    # "Application Data" is useless and causes issues, so it is excluded
+    $tempExclude = "C:\Temp\templated-exclude-files.txt"
+    Write-Output 'Application Data\' > $tempExclude
+
     # copy user directory as skeleton
     # /I - assumes destination is a directory and create for us
     # /H - copy system and hidden files
     # /E - copy directories and subdirectories
     # /C - continue even when something failed
     # /Q - quiet
-    Invoke-Command -ScriptBlock {xcopy $userPath $theUserDir /I /H /E /C /Q}
+    Invoke-Command -ScriptBlock {xcopy $userPath $theUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
 
     # create config directory
     New-Item -Path $configDir -ItemType Directory
