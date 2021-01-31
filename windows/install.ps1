@@ -74,10 +74,12 @@ function RegisterGPOStartupScript {
 RegisterGPOStartupScript "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0"
 RegisterGPOStartupScript -SetIsPowershell $false "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0"
 
-Write-Output ("[+] Allowing AUTHORITY\SYSTEM user to delete {0}" -f $userPath)
+Write-Output ("[+] Removing permission against system files at {0}" -f $userPath)
 
-# give AUTHORITY\SYSTEM user the permission to delete the user directory
+# remove deny permissions over hidden files and subdirectories
+# because there is no security justification with this sort of restriction,
+# this should not harm at all
 $icacls = (Get-Command icacls).Source
-& $icacls $userPath /T /C /grant System:D | Out-Null
+& $icacls $userPath /T /C /remove:d Everyone | Out-Null
 
 Write-Output "[+] Done"
