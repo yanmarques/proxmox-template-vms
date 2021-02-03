@@ -23,19 +23,31 @@ function linux_disks_count {
 
 function linux_start_disk {
 	local device="$1"
+
+	# block device path
 	local block_dev=/dev/"$device"
+
+	# path to disk partition
+	local block_dev_partition="$block_dev"1
 
 	# is the block device already formatted?
 	# no, so format it and configure it's contents
 	if ! blkid "$block_dev" > /dev/null; then
+		# create MBR partition table and one partition with the whole disk
+		# of the type 83 in hexcode, which means Linux type  
 		echo 'type=83' | sfdisk "$block_dev"
-		mkfs.ext4 "$block_dev"1
+
+		# create an ext4 file system on the created partition
+		mkfs.ext4 "$block_dev_partition"
+
+		# ensure mountpoiunt exists then mount
 		mkdir -p /rw/
-		mount "$block_dev"1 /rw/
+		mount "$block_dev_partition" /rw/
+
 		setup_vm_disk /bin/bash
 	else
 		mkdir -p /rw/
-		mount "$block_dev"1 /rw/
+		mount "$block_dev_partition" /rw/
 	fi
 }
 
@@ -59,7 +71,7 @@ function openbsd_start_disk {
 
 	# deduce whether disk needs a partition table initialization
 	if [ "$duid" == "$empty_duid" ]; then
-		# create fdisk partition and partition table
+		# create fdisk partition and MBR partition table
 		fdisk -iy "$char_dev_disk"
 
 		# create partition
@@ -71,12 +83,38 @@ function openbsd_start_disk {
 		# ensure mountpoint exists and mount
 		mkdir -p /rw/
 		mount "$block_dev_root" /rw/
-		
+
 		setup_vm_disk /bin/ksh
 	else
 		mkdir -p /rw/
 		mount "$block_dev_root" /rw/
 	fi
+}
+
+function openbsd_main {
+	# configure disk and mountpoints
+	openbsd_start_disk "$openbsd_dev"
+
+	# is home mounted then umount
+	if df -P | grep /home; then
+		umount /home/
+	else
+		# make a backup of /home
+		cp -r /home/ /home.old
+
+		# remove everything inside /home, just to be sure
+		rm -rf /home/*
+	fi
+	
+	# bind user home
+	ln -s /rw/home/* /home/
+}
+
+function linux_main {
+	linux_start_disk "$linux_dev"
+
+	# make a transparent bind for user's home
+	mount --bind /rw/home/ /home/
 }
 
 # configures default files on client disk
@@ -150,28 +188,28 @@ function handle_user_config {
 	/rw/config/rc.local
 }
 
+unset disks_counter main_fn
+
 case "$(uname)" in
 	OpenBSD)
-		if [ "$(openbsd_disks_count)" -lt 2 ]; then
-			exit 0
-		fi
-
-		openbsd_start_disk "$openbsd_dev"
-
-		umount /home/
-		ln -s /rw/home/* /home/
+		disks_counter=openbsd_disks_count
+		main_fn=openbsd_main
 
 		;;
 	*)
-		if [ "$(linux_disks_count)" -lt 2 ]; then
-			exit 0
-		fi
-
-		linux_start_disk "$linux_dev"
-
-		mount --bind /rw/home/ /home/
-
+		disks_counter=linux_disks_count
+		main_fn=linux_main
+		
 		;;
 esac
 
+if [ "$($disks_counter)" -lt 2 ]; then
+	echo "[-] seems like the template vm here, aborting..."
+	exit 0
+fi
+
+# call arbitrary main function
+$main_fn
+
+# apply user custom configuration
 handle_user_config
