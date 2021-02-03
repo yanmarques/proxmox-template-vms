@@ -62,12 +62,12 @@ function openbsd_start_disk {
 	local block_dev_root=/dev/"$device"a
 
 	# grab device uid
-	local duid="$(disklabel $char_dev | grep duid | awk -F: '{print $2}' | tr -d ' ')"
+	local duid="$(disklabel $device | grep duid | awk -F: '{print $2}' | tr -d ' ')"
 
 	# deduce whether disk needs a partition table initialization
-	if [ "$duid" -eq "$empty_duid" ]; then
-		fdisk -iy "$char_dev"
-		disklabel -Aw "$char_dev"
+	if [ "$duid" == "$empty_duid" ]; then
+		fdisk -iy "$char_dev_disk"
+		disklabel -Aw "$char_dev_disk"
 		newfs "$char_dev_root"
 		mkdir -p /rw/
 		mount "$block_dev_root" /rw/
@@ -156,6 +156,9 @@ case "$(uname)" in
 
 		openbsd_start_disk "$openbsd_dev"
 
+		umount /home/
+		ln -s /rw/home/ /home/
+
 		;;
 	*)
 		if [ "$(linux_disks_count)" -lt 2 ]; then
@@ -164,8 +167,9 @@ case "$(uname)" in
 
 		linux_start_disk "$linux_dev"
 
+		mount --bind /rw/home/ /home/
+
 		;;
 esac
 
-mount --bind /rw/home/ /home/
 handle_user_config
