@@ -18,7 +18,7 @@ function openbsd_disks_count {
 }
 
 function linux_disks_count {
-	fdisk -l | egrep 'Disk (sd|hd)[a-z]{1}' | wc -l
+	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
 }
 
 function linux_start_disk {
