@@ -1,0 +1,14 @@
+#!/bin/ksh
+#
+# Start template vm service
+
+daemon="/usr/sbin/maybe-start-templated-vm"
+daemon_flags=""
+
+. /etc/rc.d/rc.subr
+
+rc_start() {
+    ${rcexec} "${daemon} ${daemon_flags}"
+}
+
+rc_cmd $1
