@@ -2,8 +2,8 @@
 set -e
 
 # global vars
-openbsd_dev=sd0
-linux_dev=sda
+openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
+linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
 
 if [ $# -ne 1 ]; then
 	echo "Usage: $0 USER"
