@@ -13,15 +13,15 @@ fi
 # input argument
 user="$1"
 
-function openbsd_disks_count() {
+function openbsd_disks_count {
 	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
 }
 
-function linux_disks_count() {
+function linux_disks_count {
 	fdisk -l | egrep 'Disk (sd|hd)[a-z]{1}' | wc -l
 }
 
-function linux_start_disk() {
+function linux_start_disk {
 	local device="$1"
 	local block_dev=/dev/"$device"
 
@@ -39,14 +39,14 @@ function linux_start_disk() {
 	fi
 }
 
-function many_str() {
+function many_str {
 	local str="$1"
 	local count="$2"
 
 	printf '%*s' "$count" | tr ' ' "$str"
 }
 
-function openbsd_start_disk() {
+function openbsd_start_disk {
 	# represents an empty disk uid, seventeen zeros
 	local empty_duid="$(many_str 0 17)"
 
@@ -79,7 +79,7 @@ function openbsd_start_disk() {
 }
 
 # configures default files on client disk
-function setup_vm_disk() {
+function setup_vm_disk {
 	local binary="$1"
 
 	# create user home directory
@@ -117,7 +117,7 @@ EOF
 # now, the file /rw/binds/etc/wireguard/wg0.conf would be
 # mounted at /etc/wireguard/wg0.conf
 # 
-function bind_files() {
+function bind_files {
 	for file in "$(ls $1)"; do
 		# avoid an infinite loop
 		if [ -z "$file" ]; then
@@ -143,7 +143,7 @@ function bind_files() {
 }
 
 # execute this at startup
-function handle_user_config() {
+function handle_user_config {
 	bind_files /rw/binds
 	/rw/config/rc.local
 }
@@ -155,7 +155,7 @@ case "$(uname)" in
 		fi
 
 		openbsd_start_disk "$openbsd_dev"
-		
+
 		;;
 	*)
 		if [ "$(linux_disks_count)" -lt 2 ]; then
