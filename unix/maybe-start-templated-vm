@@ -39,16 +39,9 @@ function linux_start_disk {
 	fi
 }
 
-function many_str {
-	local str="$1"
-	local count="$2"
-
-	printf '%*s' "$count" | tr ' ' "$str"
-}
-
 function openbsd_start_disk {
-	# represents an empty disk uid, seventeen zeros
-	local empty_duid="$(many_str 0 16)"
+	# represents an empty disk uid
+	local empty_duid="0000000000000000"
 
 	local device="$1"
 	
