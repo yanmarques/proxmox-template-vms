@@ -103,6 +103,7 @@ function setup_vm_disk {
 # Put commands to execute with systemd service.
 # Eg.: systemctl start openvpn-client
 EOF
+		chmod 755 /rw/config/rc.local
 	fi
 }
 
