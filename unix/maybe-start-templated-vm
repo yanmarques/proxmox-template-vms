@@ -59,11 +59,19 @@ function openbsd_start_disk {
 
 	# deduce whether disk needs a partition table initialization
 	if [ "$duid" == "$empty_duid" ]; then
+		# create fdisk partition and partition table
 		fdisk -iy "$char_dev_disk"
+
+		# create partition
 		disklabel -Aw "$char_dev_disk"
+		
+		# create file system
 		newfs "$char_dev_root"
+
+		# ensure mountpoint exists and mount
 		mkdir -p /rw/
 		mount "$block_dev_root" /rw/
+		
 		setup_vm_disk /bin/ksh
 	else
 		mkdir -p /rw/
