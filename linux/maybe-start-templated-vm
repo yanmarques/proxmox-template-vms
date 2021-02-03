@@ -2,12 +2,8 @@
 set -e
 
 # global vars
-templated_dev=/dev/sda
-
-# only executes when we are on the client
-if [ ! -b "$templated_dev" ]; then
-	exit 0
-fi
+openbsd_dev=sd0
+linux_dev=sda
 
 if [ $# -ne 1 ]; then
 	echo "Usage: $0 USER"
@@ -17,8 +13,75 @@ fi
 # input argument
 user="$1"
 
+function openbsd_disks_count() {
+	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
+}
+
+function linux_disks_count() {
+	fdisk -l | egrep 'Disk (sd|hd)[a-z]{1}' | wc -l
+}
+
+function linux_start_disk() {
+	local device="$1"
+	local block_dev=/dev/"$device"
+
+	# is the block device already formatted?
+	# no, so format it and configure it's contents
+	if ! blkid "$block_dev" > /dev/null; then
+		echo 'type=83' | sfdisk "$block_dev"
+		mkfs.ext4 "$block_dev"1
+		mkdir -p /rw/
+		mount "$block_dev"1 /rw/
+		setup_vm_disk /bin/bash
+	else
+		mkdir -p /rw/
+		mount "$block_dev"1 /rw/
+	fi
+}
+
+function many_str() {
+	local str="$1"
+	local count="$2"
+
+	printf '%*s' "$count" | tr ' ' "$str"
+}
+
+function openbsd_start_disk() {
+	# represents an empty disk uid, seventeen zeros
+	local empty_duid="$(many_str 0 17)"
+
+	local device="$1"
+	
+	# whole disk
+	local char_dev_disk=/dev/r"$device"c
+
+	# root partition
+	local char_dev_root=/dev/r"$device"a
+	
+	# block device
+	local block_dev_root=/dev/"$device"a
+
+	# grab device uid
+	local duid="$(disklabel $char_dev | grep duid | awk -F: '{print $2}' | tr -d ' ')"
+
+	# deduce whether disk needs a partition table initialization
+	if [ "$duid" -eq "$empty_duid" ]; then
+		fdisk -iy "$char_dev"
+		disklabel -Aw "$char_dev"
+		newfs "$char_dev_root"
+		mkdir -p /rw/
+		mount "$block_dev_root" /rw/
+		setup_vm_disk /bin/ksh
+	else
+		mkdir -p /rw/
+		mount "$block_dev_root" /rw/
+	fi
+}
+
 # configures default files on client disk
-setup_vm_disk() {
+function setup_vm_disk() {
+	local binary="$1"
+
 	# create user home directory
 	mkdir -p /rw/home
 	cp -r /etc/skel/ /rw/home/"$user"	
@@ -36,7 +99,7 @@ setup_vm_disk() {
 
 	if [ ! -f /rw/config/rc.local ]; then
 		cat <<EOF > /rw/config/rc.local
-#!/bin/bash
+#!$binary
 # Put commands to execute with systemd service.
 # Eg.: systemctl start openvpn-client
 EOF
@@ -54,7 +117,7 @@ EOF
 # now, the file /rw/binds/etc/wireguard/wg0.conf would be
 # mounted at /etc/wireguard/wg0.conf
 # 
-bind_files() {
+function bind_files() {
 	for file in "$(ls $1)"; do
 		# avoid an infinite loop
 		if [ -z "$file" ]; then
@@ -80,23 +143,29 @@ bind_files() {
 }
 
 # execute this at startup
-handle_user_config() {
+function handle_user_config() {
 	bind_files /rw/binds
-	bash /rw/config/rc.local
+	/rw/config/rc.local
 }
 
-# is the block device already formatted?
-# no, so format it and configure it's contents
-if ! blkid "$templated_dev" > /dev/null; then
-	echo 'type=83' | sfdisk "$templated_dev"
-	mkfs.ext4 "$templated_dev"1
-	mkdir -p /rw/
-	mount "$templated_dev"1 /rw/
-	setup_vm_disk
-else
-	mkdir -p /rw/
-	mount "$templated_dev"1 /rw/
-fi
+case "$(uname)" in
+	OpenBSD)
+		if [ "$(openbsd_disks_count)" -lt 2 ]; then
+			exit 0
+		fi
+
+		openbsd_start_disk "$openbsd_dev"
+		
+		;;
+	*)
+		if [ "$(linux_disks_count)" -lt 2 ]; then
+			exit 0
+		fi
+
+		linux_start_disk "$linux_dev"
+
+		;;
+esac
 
 mount --bind /rw/home/ /home/
 handle_user_config
