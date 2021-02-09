@@ -198,7 +198,9 @@ bind_files() {
 		local should_bind=false
 		
 		if [ -d "$path" ]; then
-			if is_directory_bind "$file"; then				
+			local fake_path="${path#/rw/binds}"
+			
+			if is_directory_bind "$fake_path"; then				
 				should_bind=true
 			else
 				# recursive function call when path is a directory
