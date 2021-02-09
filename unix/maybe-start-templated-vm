@@ -144,6 +144,11 @@ setup_vm_disk() {
 EOF
 		chmod 755 /rw/config/rc.local
 	fi
+
+	if [ ! -f /rw/config/bind-dirs.manifest ]; then
+		touch /rw/config/bind-dirs.manifest
+		chmod 644 /rw/config/bind-dirs.manifest
+	fi
 }
 
 # try to resolve a path to it's real path
@@ -167,6 +172,10 @@ maybe_resolve_symlink_path() {
 	echo "$path"
 }
 
+is_directory_bind() {
+	test -d "$1" && egrep "^${1%/}/?$" /rw/config/bind-dirs.manifest
+}
+
 # given a root directory, mount every file to the root filesystem
 #
 # imagine the following file structure:
@@ -187,8 +196,9 @@ bind_files() {
 
 		local path="${1%/}/$file"
 		
-		if [ -d "$path" ]; then
+		if ! is_directory_bind "$path"; then
 			# recursive function call when path is a directory
+			# and is not registered as a bind
 		    bind_files "$path"
 	    else
 			# try to find the real path
@@ -208,6 +218,12 @@ bind_files() {
 
 			# ensure directory exists
 			mkdir -p "$(dirname $target_file)"
+
+			# backup existing content and ensure target_file
+			# is not present
+			if [ -e "$target_file" ]; then
+				mv "$target_file" "${target_file%/}.old"
+			fi
 
 			# create a symbolic link
 			ln -s "$real_path" "$target_file"
