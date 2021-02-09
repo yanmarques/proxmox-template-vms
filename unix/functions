@@ -207,7 +207,7 @@ bind_files() {
 			should_bind=true
 		fi
 
-		should_bind && local_bind_file_object "$path"
+		$should_bind && local_bind_file_object "$path"
 	done
 }
 
