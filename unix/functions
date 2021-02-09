@@ -202,6 +202,7 @@ bind_files() {
 				# recursive function call when path is a directory
 				# and is not registered as a bind
 		    	bind_files "$path"
+			fi
 	    else
 			should_bind=true
 		fi
