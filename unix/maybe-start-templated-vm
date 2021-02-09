@@ -122,19 +122,19 @@ setup_vm_disk() {
 	local binary="$1"
 
 	# create user home directory
-	mkdir -p /rw/home
+	mkdir -p /rw/home/
 	cp -r /etc/skel/ /rw/home/"$user"	
 	chown -R "$user":"$user" /rw/home/"$user"
 
 	# maybe restore SELinux security context
 	if command -v restorecon > /dev/null 2>&1; then
-		restorecon -R /rw/home
+		restorecon -R /rw/home/
 	fi
 
 	# configuration files
 	# gives user full control over the installation
-	mkdir -p /rw/config
-	mkdir -p /rw/binds
+	mkdir -p /rw/config/
+	mkdir -p /rw/binds/
 
 	if [ ! -f /rw/config/rc.local ]; then
 		cat <<EOF > /rw/config/rc.local
