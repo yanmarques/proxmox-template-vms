@@ -198,7 +198,7 @@ bind_files() {
 		if [ -d "$path" ]; then
 			local fake_path="${path#/rw/binds}"
 			
-			if is_directory_bind "$fake_path"; then
+			if ! is_directory_bind "$fake_path"; then
 				# will ignore this current file		
 				should_bind=false
 
