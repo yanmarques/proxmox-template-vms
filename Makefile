@@ -11,8 +11,11 @@ linux-uninstall: clean-bin
 	@systemctl disable start-templated-vm@
 	@rm -f /etc/systemd/system/start-templated-vm@.service
 
-install-bin:
+install-bin: install-lib
 	@install -m 755 unix/maybe-start-templated-vm /usr/sbin/
+
+install-lib:
+	@mkdir -p /var/lib/proxmox-templated-vms/ && install -m 644 unix/functions /var/lib/proxmox-templated-vms/
 
 clean-bin:
 	@rm -f /usr/sbin/maybe-start-templated-vm
