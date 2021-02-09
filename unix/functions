@@ -197,20 +197,19 @@ bind_files() {
 		fi
 
 		local path="${1%/}/$file"
-		local should_bind=false
+		local should_bind=true
 		
 		if [ -d "$path" ]; then
 			local fake_path="${path#/rw/binds}"
+			
+			if is_directory_bind "$fake_path"; then
+				# will ignore this current file		
+				should_bind=false
 
-			if is_directory_bind "$fake_path"; then			
-				should_bind=true
-			else
 				# recursive function call when path is a directory
 				# and is not registered as a bind
 		    	bind_files "$path"
 			fi
-	    else
-			should_bind=true
 		fi
 
 		$should_bind && local_bind_file_object "$path"
