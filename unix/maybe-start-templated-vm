@@ -158,7 +158,7 @@ EOF
 # mounted at /etc/wireguard/wg0.conf
 # 
 bind_files() {
-	for file in "$(ls $1)"; do
+	for file in $(ls "$1"); do
 		# avoid an infinite loop
 		if [ -z "$file" ]; then
 			break
