@@ -172,8 +172,10 @@ maybe_resolve_symlink_path() {
 
 is_directory_bind() {
 	local sufix_transform="/${1#/}"
-	local sufix_and_prefix="${1%/}/"
-	grep "^$sufix_and_prefix$" /rw/config/bind-dirs.manifest
+	local sufix_and_prefix="${sufix_transform%/}/"
+
+	grep -e "^$sufix_transform$" -e "^$sufix_and_prefix$" \
+		/rw/config/bind-dirs.manifest > /dev/null 2>&1
 }
 
 # given a root directory, mount every file to the root filesystem
@@ -200,7 +202,7 @@ bind_files() {
 		if [ -d "$path" ]; then
 			local fake_path="${path#/rw/binds}"
 
-			if is_directory_bind "$fake_path"; then				
+			if is_directory_bind "$fake_path"; then			
 				should_bind=true
 			else
 				# recursive function call when path is a directory
