@@ -31,16 +31,13 @@ linux_start_disk() {
 
 		# create an ext4 file system on the created partition
 		mkfs.ext4 "$block_dev_partition"
-
-		# ensure mountpoiunt exists then mount
-		mkdir -p /rw/
-		mount "$block_dev_partition" /rw/
-
-		setup_vm_disk /bin/bash "$user"
-	else
-		mkdir -p /rw/
-		mount "$block_dev_partition" /rw/
 	fi
+
+	# ensure mountpoiunt exists then mount
+	mkdir -p /rw/
+	mount "$block_dev_partition" /rw/
+
+	setup_vm_disk /bin/bash "$user"
 }
 
 openbsd_start_disk() {
@@ -72,16 +69,13 @@ openbsd_start_disk() {
 		
 		# create file system
 		newfs "$char_dev_root"
-
-		# ensure mountpoint exists and mount
-		mkdir -p /rw/
-		mount "$block_dev_root" /rw/
-
-		setup_vm_disk /bin/ksh "$user"
-	else
-		mkdir -p /rw/
-		mount "$block_dev_root" /rw/
 	fi
+
+	# ensure mountpoint exists and mount
+	mkdir -p /rw/
+	mount "$block_dev_root" /rw/
+
+	setup_vm_disk /bin/ksh "$user"
 }
 
 openbsd_main() {
@@ -120,13 +114,15 @@ setup_vm_disk() {
 	local user="$2"
 
 	# create user home directory
-	mkdir -p /rw/home/
-	cp -r /etc/skel/ /rw/home/"$user"	
-	chown -R "$user":"$user" /rw/home/"$user"
+	if [ ! -d /rw/home/ ]; then
+		mkdir -p /rw/home/
+		cp -r /etc/skel/ /rw/home/"$user"	
+		chown -R "$user":"$user" /rw/home/"$user"
 
-	# maybe restore SELinux security context
-	if command -v restorecon > /dev/null 2>&1; then
-		restorecon -R /rw/home/
+		# maybe restore SELinux security context
+		if command -v restorecon > /dev/null 2>&1; then
+			restorecon -R /rw/home/
+		fi
 	fi
 
 	# configuration files
