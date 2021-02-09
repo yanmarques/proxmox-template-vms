@@ -14,7 +14,7 @@ linux_disks_count() {
 
 linux_start_disk() {
 	local device="$1"
-	local user="$1"
+	local user="$2"
 
 	# block device path
 	local block_dev=/dev/"$device"
