@@ -146,6 +146,27 @@ EOF
 	fi
 }
 
+# try to resolve a path to it's real path
+# 
+# it may not be able to deliver when the link 
+# level is too high. in order to address this problem, 
+# one may specify as second argument the maximum depth 
+maybe_resolve_symlink_path() {
+	local path max_depth symlink_level_counter real_path
+
+	path="$1"
+	max_depth="${2:-15}"
+	symlink_level_counter="0"
+
+	while [ -h "$path" ] && [ "$symlink_level_counter" -lt "$max_depth" ]; do
+		real_path="$(realpath "$path")"
+		path="$real_path"
+		symlink_level_counter="$(( symlink_level_counter + 1 ))"
+	done
+
+	echo "$path"
+}
+
 # given a root directory, mount every file to the root filesystem
 #
 # imagine the following file structure:
@@ -165,10 +186,22 @@ bind_files() {
 		fi
 
 		local path="${1%/}/$file"
+		
 		if [ -d "$path" ]; then
-		       bind_files "$path"
+			# recursive function call when path is a directory
+		    bind_files "$path"
 	    else
-			local target_file="${path#/rw/binds}"
+			# try to find the real path
+			real_path="$(maybe_resolve_symlink_path "$path")"
+			
+			# is it still a symlink? skip
+			if [ -h "$real_path" ]; then
+				echo "[-] $0: symbolic link is too depth: $path"
+				continue
+			fi
+
+			# find the target path to file
+			local target_file="${real_path#/rw/binds}"
 
 			# ensure it is an absolute path to the filesystem
 			target_file="/${target_file#/}"
@@ -176,8 +209,8 @@ bind_files() {
 			# ensure directory exists
 			mkdir -p "$(dirname $target_file)"
 
-			# then copy it
-			cp -p "$path" "$target_file"
+			# create a symbolic link
+			ln -s "$real_path" "$target_file"
 		fi    
 	done
 }
