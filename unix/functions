@@ -199,7 +199,7 @@ bind_files() {
 		
 		if [ -d "$path" ]; then
 			local fake_path="${path#/rw/binds}"
-			
+
 			if is_directory_bind "$fake_path"; then				
 				should_bind=true
 			else
@@ -239,7 +239,7 @@ local_bind_file_object() {
 	# backup existing content and ensure target_file
 	# is not present
 	if [ -e "$target_file" ]; then
-		mv "$target_file" "${target_file%/}.old"
+		mv --force "$target_file" "${target_file%/}.old"
 	fi
 
 	# create a symbolic link
