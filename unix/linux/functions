@@ -30,8 +30,8 @@ start_disk() {
 	fi
 
 	# ensure mountpoiunt exists then mount
-	mkdir -p /rw/
-	mount "$block_dev_partition" /rw/
+	mkdir -p "$rw_dir"
+	mount "$block_dev_partition" "$rw_dir"
 
 	setup_vm_disk /bin/bash
 }
