@@ -3,7 +3,7 @@
 # load main templated library
 source /var/lib/proxmox-templated-vms/functions
 
-linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
+linux_dev="${TEMPLATED_DEV:-sda}"
 
 disks_counter() {
 	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
