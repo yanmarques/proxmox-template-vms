@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# load main templated library
 source /var/lib/proxmox-templated-vms/functions
 
 linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
