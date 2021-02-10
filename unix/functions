@@ -291,5 +291,5 @@ templated_exec() {
 		info "starting templated main function"
 		$start_fn
 		handle_user_config
-	} > "$log_file" 2>&1
+	} >> "$log_file" 2>&1
 }
