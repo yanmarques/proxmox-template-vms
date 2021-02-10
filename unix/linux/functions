@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source /var/lib/proxmox-templated-vms/functions
+
+linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
+
+disks_counter() {
+	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
+}
+
+start_disk() {
+	local device="$1"
+	local user="$2"
+
+	# block device path
+	local block_dev=/dev/"$device"
+
+	# path to disk partition
+	local block_dev_partition="$block_dev"1
+
+	# is the block device already formatted?
+	# no, so format it and configure it's contents
+	if ! blkid "$block_dev" > /dev/null; then
+		# create MBR partition table and one partition with the whole disk
+		# of the type 83 in hexcode, which means Linux type  
+		echo 'type=83' | sfdisk "$block_dev"
+
+		# create an ext4 file system on the created partition
+		mkfs.ext4 "$block_dev_partition"
+	fi
+
+	# ensure mountpoiunt exists then mount
+	mkdir -p /rw/
+	mount "$block_dev_partition" /rw/
+
+	setup_vm_disk /bin/bash "$user"
+}
+
+main() {
+	local user="$1"
+
+	start_disk "$linux_dev" "$user"
+
+	# make a transparent bind for user's home
+	mount --bind /rw/home/ /home/
+}
+
+entrypoint() {
+    if [ $# -ne 1 ]; then
+        echo "Usage: $0 USER"
+        exit 1
+    fi
+
+    templated_exec main
+}
