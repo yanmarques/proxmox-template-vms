@@ -11,7 +11,6 @@ disks_counter() {
 
 start_disk() {
 	local device="$1"
-	local user="$2"
 
 	# block device path
 	local block_dev=/dev/"$device"
@@ -34,13 +33,13 @@ start_disk() {
 	mkdir -p /rw/
 	mount "$block_dev_partition" /rw/
 
-	setup_vm_disk /bin/bash "$user"
+	setup_vm_disk /bin/bash
 }
 
 main() {
-	local user="$1"
+	on_template_or_out $(disks_counter)
 
-	start_disk "$linux_dev" "$user"
+	start_disk "$linux_dev"
 
 	# make a transparent bind for user's home
 	mount --bind /rw/home/ /home/
@@ -52,5 +51,5 @@ entrypoint() {
         exit 1
     fi
 
-    templated_exec main
+    templated_exec main "$1"
 }
