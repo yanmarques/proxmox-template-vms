@@ -1,0 +1,29 @@
+#!/usr/bin/env bats
+
+if [ -z "$TEMPLATED_BASE_DIR" ]; then
+    TEMPLATED_BASE_DIR="$(pwd)"
+    echo "[+] any base directory found on TEMPLATED_BASE_DIR env, will use $TEMPLATED_BASE_DIR"
+fi
+
+source "$TEMPLATED_BASE_DIR"/tests/unix/linux/functions
+
+@test "raw disk gets fully configured" {
+    # artifact to test
+    touch "$skel_dir"/testing-templated
+
+    start_disk "$test_disk"
+    
+    umount "$rw_dir"
+
+    # re-mount disk to be sure
+    register_tmp_dir
+    local tmp_dir="$(last_tmp_dir)"
+    loop_mount "$test_disk" "$tmp_dir"
+
+    local expected_dirs=('config' 'binds' 'home')
+    for directory in ${expected_dirs[@]}; do
+        test -d "$tmp_dir/$directory"
+    done
+
+    test -e "$tmp_dir/$test_home/testing-templated"
+}

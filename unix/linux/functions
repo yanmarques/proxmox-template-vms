@@ -3,17 +3,31 @@
 # load main templated library
 source /var/lib/proxmox-templated-vms/functions
 
-linux_dev="${TEMPLATED_DEV:-sda}"
+linux_dev="${TEMPLATED_DEV:-/dev/sda}"
+
+# mocking functions
+make_fs=${TEMPLATED_MOCK_MKFS:-mkfs.ext4}
+mount_fs=${TEMPLATED_MOCK_MOUNT:-mount}
 
 disks_counter() {
 	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
 }
 
-start_disk() {
-	local device="$1"
+# create MBR partition table and one partition with the whole disk
+# of the type 83 in hexcode, which means Linux type  
+format_disk() {
+	local block_dev="$1"
+	echo 'type=83' | sfdisk "$block_dev" > /dev/null
+}
 
+create_fs() {
+	local block_dev_partition="$1"
+	$make_fs "$block_dev_partition" > /dev/null
+}
+
+start_disk() {
 	# block device path
-	local block_dev=/dev/"$device"
+	local block_dev="$1"
 
 	# path to disk partition
 	local block_dev_partition="$block_dev"1
@@ -21,19 +35,29 @@ start_disk() {
 	# is the block device already formatted?
 	# no, so format it and configure it's contents
 	if ! blkid "$block_dev" > /dev/null; then
-		# create MBR partition table and one partition with the whole disk
-		# of the type 83 in hexcode, which means Linux type  
-		echo 'type=83' | sfdisk "$block_dev"
+		local fmt_title="format block device"
+		if ! exec_log "$fmt_title"  format_disk "$block_dev"; then
+			exit 5
+		fi
 
 		# create an ext4 file system on the created partition
-		mkfs.ext4 "$block_dev_partition"
+		local mkfs_title="create fs on partition"
+		if ! exec_log "$mkfs_title" create_fs "$block_dev_partition"; then
+			exit 6
+		fi
 	fi
 
 	# ensure mountpoiunt exists then mount
 	mkdir -p "$rw_dir"
-	mount "$block_dev_partition" "$rw_dir"
+	
+	# mount device disk on rw directory
+	if ! exec_log "mount device" $mount_fs "$block_dev_partition" "$rw_dir"; then
+		exit 7
+	fi
 
-	setup_vm_disk /bin/bash
+	if ! exec_log "disk setup" setup_vm_disk /bin/bash; then
+		exit 8
+	fi
 }
 
 main() {

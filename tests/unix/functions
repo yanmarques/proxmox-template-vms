@@ -1,0 +1,76 @@
+#!/bin/sh
+
+if [ -z "$TEMPLATED_BASE_DIR" ]; then
+    TEMPLATED_BASE_DIR="$(pwd)"
+    echo "[+] any base directory found on TEMPLATED_BASE_DIR env, will use $TEMPLATED_BASE_DIR"
+fi
+
+source "$TEMPLATED_BASE_DIR"/unix/linux/functions
+source "$TEMPLATED_BASE_DIR"/unix/functions
+
+# set handy env vars 
+TEMPLATED_LOG_FILE=/dev/stdout
+
+unset test_disk test_home
+
+# global user
+user="test"
+
+# init array with created temporary directories
+temp_dirs=()
+
+# set rw directory as temporary
+new_rw_dir() {
+    register_tmp_dir
+    rw_dir="$(last_tmp_dir)"
+}
+
+# set skeleton directory as temporary
+new_skel_dir() {
+    register_tmp_dir
+    skel_dir="$(last_tmp_dir)"
+}
+
+register_tmp_dir() {
+    local directory=$(mktemp --directory)
+    temp_dirs+=( "$directory" )
+}
+
+last_tmp_dir() {
+    echo "${temp_dirs[-1]}"
+}
+
+create_dummy_disk() {
+    test_disk=$(mktemp)
+    dd if=/dev/zero of="$test_disk" bs=1M count=10 2> /dev/null
+}
+
+setup() {
+    # call some default functions
+    new_rw_dir
+    new_skel_dir
+    create_dummy_disk
+
+    # create user in system
+    useradd "$user" 2> /dev/null
+
+    # set our test user
+    test_home=/home/"$user"
+}
+
+teardown() {
+    # purge user from system
+    userdel "$user" 2> /dev/null
+
+    # this is generally being mounted, so try to umount it
+    umount "$rw_dir" 2> /dev/null || true
+
+    # remove every registered directory
+    for directory in ${temp_dirs[@]}; do
+        umount "$directory" 2> /dev/null || true
+        rm -rf "$directory"
+    done
+
+    # remove user home
+    rm -rf "$test_home"
+}

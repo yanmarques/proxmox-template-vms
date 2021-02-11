@@ -8,12 +8,14 @@ unset user rw_dir
 
 # rw directorty var
 rw_dir=${TEMPLATED_RW_DIR:-/rw}
-
-# ensure it does not end with a slash
 rw_dir=${rw_dir%/}
 
 # where log to
 log_file="${TEMPLATED_LOG_FILE:-/var/log/templated.log}"
+
+# skeleton directory for user
+skel_dir=${TEMPLATED_SKEL_DIR:-/etc/skel}
+skel_dir=${skel_dir%/}
 
 # global vars
 openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
@@ -130,7 +132,9 @@ setup_vm_disk() {
 	# create user home directory
 	if [ ! -d "$rw_dir"/home/ ]; then
 		mkdir -p "$rw_dir"/home/
-		cp -r /etc/skel/ "$rw_dir"/home/"$user"	
+
+		info "populating home directory using: $skel_dir"
+		cp -r "$skel_dir" "$rw_dir"/home/"$user"	
 		chown -R "$user":"$user" "$rw_dir"/home/"$user"
 
 		# maybe restore SELinux security context
@@ -276,6 +280,23 @@ info() {
 
 err() {
 	echo "$(date) [ERROR] $@"
+}
+
+exec_log() {
+	local print_args=true 
+	local title="$1"
+	local fn=$2
+	shift
+	shift
+	local args=$@
+
+	local text="$title [${args[@]}]"
+
+	if $fn $args; then
+		info "$text: succeded"
+	else
+		err "$text: failed"
+	fi
 }
 
 templated_exec() {
