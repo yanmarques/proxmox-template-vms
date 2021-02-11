@@ -1,10 +1,29 @@
-# shellcheck shell=bash
+#!/bin/bash
 
-run_test() {
-    source ./tests/unix/linux/functions
-    setup
+# shellcheck source=/dev/null
+. ./tests/unix/linux/functions
 
-    $1
+start() {
+    # artifact to test
+    touch "$skel_dir"/testing-templated
 
-    teardown
+    start_disk "$test_disk"
+
+    umount "$rw_dir"
+
+    # re-mount disk to be sure
+    register_tmp_dir
+    local tmp_dir="$(last_tmp_dir)"
+    loop_mount "$test_disk" "$tmp_dir"
+
+    local expected_dirs=('config' 'binds' 'home')
+    for directory in "${expected_dirs[@]}"; do
+        test -d "$tmp_dir/$directory"
+    done
+
+    test -e "$tmp_dir/$test_home/testing-templated"
+}
+
+with_disk_started() {
+    start_disk "$test_disk"
 }

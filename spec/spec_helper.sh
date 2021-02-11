@@ -1,5 +1,8 @@
 # shellcheck shell=sh
 
+# shellcheck source=/dev/null
+. ./tests/unix/functions
+
 # Defining variables and functions here will affect all specfiles.
 # Change shell options inside a function may cause different behavior,
 # so it is better to set them here.

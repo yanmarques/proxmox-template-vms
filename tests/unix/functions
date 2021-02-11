@@ -2,13 +2,14 @@
 
 # shellcheck shell=ksh
 
-# shellcheck disable=SC1091
-source ./unix/linux/functions
-source ./unix/functions
-
 # set handy env vars 
+
+# send logs to console
 # shellcheck disable=SC2034
 TEMPLATED_LOG_FILE=/dev/stdout
+
+# shellcheck disable=SC1091
+source ./unix/functions
 
 unset test_disk test_home
 

@@ -1,9 +1,16 @@
-#!/bin/bash
+#!/bin/bash 
 
 TEMPLATED_MOCK_MKFS=dummy_mkfs
 TEMPLATED_MOCK_MOUNT=loop_mount
 
-source ./tests/unix/functions
+# sanity check, disable real device formating
+# shellcheck disable=SC2034
+TEMPLATED_DEV=/dev/null
+
+# provive our current lib dir
+TEMPLATED_RUNTIME_LIB_DIR=./unix
+
+. ./unix/linux/functions
 
 dummy_disk_partition_offset() {
     local start_sector
