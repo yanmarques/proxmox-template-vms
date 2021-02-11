@@ -1,14 +1,9 @@
 #!/bin/bash
 
-if [ -z "$TEMPLATED_BASE_DIR" ]; then
-    TEMPLATED_BASE_DIR="$(pwd)"
-    echo "[+] any base directory found on TEMPLATED_BASE_DIR env, will use $TEMPLATED_BASE_DIR"
-fi
-
 TEMPLATED_MOCK_MKFS=dummy_mkfs
 TEMPLATED_MOCK_MOUNT=loop_mount
 
-source "$TEMPLATED_BASE_DIR"/tests/unix/functions
+source ./tests/unix/functions
 
 dummy_disk_partition_offset() {
     local start_sector
@@ -28,7 +23,7 @@ dummy_first_partition() {
 dummy_mkfs() {
     local device=$(dummy_device_name "$1")
     local part1_offset=$(dummy_disk_partition_offset "$device")
-    mkfs.ext4 -F -E offset="$part1_offset" "$device"
+    mkfs.ext4 -F -E offset="$part1_offset" "$device" 2> /dev/null
 }
 
 loop_mount() {

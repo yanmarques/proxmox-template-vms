@@ -1,14 +1,13 @@
 #!/bin/sh
 
-if [ -z "$TEMPLATED_BASE_DIR" ]; then
-    TEMPLATED_BASE_DIR="$(pwd)"
-    echo "[+] any base directory found on TEMPLATED_BASE_DIR env, will use $TEMPLATED_BASE_DIR"
-fi
+# shellcheck shell=ksh
 
-source "$TEMPLATED_BASE_DIR"/unix/linux/functions
-source "$TEMPLATED_BASE_DIR"/unix/functions
+# shellcheck disable=SC1091
+source ./unix/linux/functions
+source ./unix/functions
 
 # set handy env vars 
+# shellcheck disable=SC2034
 TEMPLATED_LOG_FILE=/dev/stdout
 
 unset test_disk test_home
@@ -66,7 +65,7 @@ teardown() {
     umount "$rw_dir" 2> /dev/null || true
 
     # remove every registered directory
-    for directory in ${temp_dirs[@]}; do
+    for directory in "${temp_dirs[@]}"; do
         umount "$directory" 2> /dev/null || true
         rm -rf "$directory"
     done
