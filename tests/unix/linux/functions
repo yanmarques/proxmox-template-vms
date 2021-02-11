@@ -7,9 +7,6 @@ TEMPLATED_MOCK_MOUNT=loop_mount
 # shellcheck disable=SC2034
 TEMPLATED_DEV=/dev/null
 
-# provive our current lib dir
-TEMPLATED_RUNTIME_LIB_DIR=./unix
-
 . ./unix/linux/functions
 
 dummy_disk_partition_offset() {

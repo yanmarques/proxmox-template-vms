@@ -11,6 +11,9 @@ TEMPLATED_LOG_FILE=/dev/stdout
 # shellcheck disable=SC1091
 source ./unix/functions
 
+# shellcheck disable=SC1091
+. ./tests/unix/helpers
+
 unset test_disk test_home
 
 # global user
@@ -71,6 +74,7 @@ teardown() {
         rm -rf "$directory"
     done
 
+    echo "$test_home"
     # remove user home
-    rm -rf "$test_home"
+    # rm -rf "$test_home"
 }

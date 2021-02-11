@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# load main templated library
-# shellcheck source=/dev/null
-. "$TEMPLATED_RUNTIME_LIB_DIR"/functions
-
 linux_dev="${TEMPLATED_DEV:-/dev/sda}"
 
 # mocking functions
