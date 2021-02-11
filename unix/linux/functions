@@ -63,7 +63,7 @@ main() {
 	start_disk "$linux_dev"
 
 	# make a transparent bind for user's home
-	mount --bind "$rw_dir"/home/ /home/
+	mount --bind "$(rw_base_home)" "$base_home_dir"
 }
 
 entrypoint() {

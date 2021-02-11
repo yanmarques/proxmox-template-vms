@@ -9,5 +9,5 @@ not_empty() {
 }
 
 mounted() {
-    df --output='target' | grep "^${mounted}$"
+    [ -d "$directory" ] && df --output='target' | grep "^${mounted}$"
 }

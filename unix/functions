@@ -19,9 +19,18 @@ log_file="${TEMPLATED_LOG_FILE:-/var/log/templated.log}"
 skel_dir=${TEMPLATED_SKEL_DIR:-/etc/skel}
 skel_dir=${skel_dir%/}
 
+# base home directory
+base_home_dir=${TEMPLATED_BASE_HOME_DIR:-"$base_home_dir"}
+base_home_dir=${base_home_dir%/}
+
 # global vars
 openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
 # linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
+
+
+rw_base_home() {
+	echo "$rw_dir/${base_home_dir#/}"
+}
 
 openbsd_disks_count() {
 	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
@@ -104,18 +113,18 @@ openbsd_main() {
 	openbsd_start_disk "$openbsd_dev" "$user"
 
 	# is home mounted then umount
-	if df -P | grep /home; then
-		umount /home/
+	if df -P | grep "$base_home_dir"; then
+		umount "$base_home_dir"
 	else
-		# make a backup of /home
-		cp -r /home/ /home.old
+		# make a backup of "$base_home_dir"
+		mv "$base_home_dir" "$base_home_dir".old
 
-		# remove everything inside /home, just to be sure
-		rm -rf /home/*
+		# recreate base home directory
+		mkdir -m 700 "$base_home_dir"
 	fi
 	
 	# bind user home
-	ln -s "$rw_dir"/home/* /home/
+	ln -s "$(rw_base_home)"/* "$base_home_dir"
 }
 
 # linux_main() {
@@ -132,16 +141,16 @@ setup_vm_disk() {
 	local binary="$1"
 
 	# create user home directory
-	if [ ! -d "$rw_dir"/home/ ]; then
-		mkdir -p "$rw_dir"/home/
+	if [ ! -d "$(rw_base_home)" ]; then
+		mkdir -p "$(rw_base_home)"
 
 		info "populating home directory using: $skel_dir"
-		cp -r "$skel_dir" "$rw_dir"/home/"$user"	
-		chown -R "$user":"$user" "$rw_dir"/home/"$user"
+		cp -r "$skel_dir" "$(rw_base_home)"/"$user"	
+		chown -R "$user":"$user" "$(rw_base_home)"/"$user"
 
 		# maybe restore SELinux security context
 		if command -v restorecon > /dev/null 2>&1; then
-			restorecon -R "$rw_dir"/home/
+			restorecon -R "$(rw_base_home)"
 		fi
 	fi
 

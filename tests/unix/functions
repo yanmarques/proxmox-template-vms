@@ -30,7 +30,6 @@ new_rw_dir() {
 
 # set skeleton directory as temporary
 new_skel_dir() {
-    register_tmp_dir
     skel_dir="$(last_tmp_dir)"
 }
 
@@ -48,6 +47,12 @@ create_dummy_disk() {
     dd if=/dev/zero of="$test_disk" bs=1M count=10 2> /dev/null
 }
 
+create_new_user_home() {
+    register_tmp_dir
+    base_home_dir="$(last_tmp_dir)"
+    test_home="$base_home_dir/$user"
+}
+
 setup() {
     # call some default functions
     new_rw_dir
@@ -57,8 +62,7 @@ setup() {
     # create user in system
     useradd "$user" 2> /dev/null
 
-    # set our test user
-    test_home=/home/"$user"
+    create_new_user_home
 }
 
 teardown() {
@@ -74,7 +78,13 @@ teardown() {
         rm -rf "$directory"
     done
 
-    echo "$test_home"
-    # remove user home
-    # rm -rf "$test_home"
+    # safety check, when /home is being used, certainly it was not our script
+    # which made the change, so be safe and keep directory
+    if [[ "$test_home" == /home/* ]]; then
+        err "this is weird, seems like you are not using a temporary directory as home directory"
+        er "for safety purposes, the deletion of the directory will be skipped: $test_home"
+    else
+        # remove user home
+        rm -rf "$test_home"
+    fi
 }
