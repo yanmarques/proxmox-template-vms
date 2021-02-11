@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
-source /var/lib/proxmox-templated-vms/linux/functions
+TEMPLATED_RUNTIME_LIB_DIR=/var/lib/proxmox-templated-vms
 
-entrypoint $@
+# shellcheck source=/dev/null
+. "$TEMPLATED_RUNTIME_LIB_DIR"/linux/functions
+
+entrypoint "$@"
