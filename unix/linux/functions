@@ -46,14 +46,10 @@ start_disk() {
 
 	# ensure mountpoiunt exists then mount
 	mkdir -p "$rw_dir"
-	
+
 	# mount device disk on rw directory
 	if ! exec_log "mount device" $mount_fs "$block_dev_partition" "$rw_dir"; then
 		exit 7
-	fi
-
-	if ! exec_log "disk setup" setup_vm_disk /bin/bash; then
-		exit 8
 	fi
 }
 
@@ -61,6 +57,10 @@ main() {
 	on_template_or_out $(disks_counter)
 
 	start_disk "$linux_dev"
+
+	if ! exec_log "disk setup" setup_vm_disk /bin/bash; then
+		exit 8
+	fi
 
 	# make a transparent bind for user's home
 	mount --bind "$(rw_base_home)" "$base_home_dir"

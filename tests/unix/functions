@@ -62,7 +62,7 @@ setup() {
     create_new_user_base_home
 
     create_user() {
-        useradd -M "$user" 2> /dev/stdout
+        useradd -M "$user" >> /dev/stdout 2&
     }
 
     ensure_user_exists() {
@@ -79,7 +79,7 @@ setup() {
         fi
     }
 
-    ensure_user_exists 2> /dev/stdout
+    ensure_user_exists >> /dev/stdout 2&
 }
 
 teardown() {

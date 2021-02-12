@@ -150,10 +150,16 @@ setup_vm_disk() {
 			exit 5
 		fi
 
-		if ! exec_log "set home user permission" \
-			chown -R "$user":"$user" "$(rw_base_home)"/"$user"; then
+		if ! exec_log "set home user owner perm" \
+			chown -R "$user" "$(rw_base_home)"/"$user"; then
 
 			exit 6
+		fi
+
+		if ! exec_log "set home user group perm" \
+			chgrp -R "$user" "$(rw_base_home)"/"$user"; then
+
+			exit 7
 		fi
 
 		# maybe restore SELinux security context
@@ -298,7 +304,7 @@ info() {
 }
 
 err() {
-	echo "$(date) [ERROR] $@" > /dev/stderr
+	echo "$(date) [ERROR] $@" >> /dev/stderr
 }
 
 exec_log() {
@@ -306,11 +312,10 @@ exec_log() {
 	local fn=$2
 	shift
 	shift
-	local args=$*
 
-	local text="$title [$args]"
+	local text="$title [$fn $*]"
 
-	if $fn "$args"; then
+	if $fn "$@"; then
 		info "$text: succeded"
 		return 0
 	fi
