@@ -57,6 +57,7 @@ End
 
 Describe "is_raw_disk()"
     It "recognizes dummy created disk as raw"
+        # shellcheck disable=SC2154
         When call is_raw_disk "$test_disk"
         The status should be success
     End

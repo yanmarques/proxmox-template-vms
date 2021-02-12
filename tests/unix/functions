@@ -35,7 +35,9 @@ new_skel_dir() {
 }
 
 register_tmp_dir() {
-    local directory=$(mktemp --directory)
+    local directory
+    directory=$(mktemp --directory)
+
     temp_dirs+=( "$directory" )
 }
 

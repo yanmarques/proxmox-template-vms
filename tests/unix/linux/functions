@@ -4,6 +4,7 @@
 # shellcheck disable=SC2034
 TEMPLATED_DEV=/dev/null
 
+# shellcheck disable=SC1091
 . ./unix/linux/functions
 
 # default first partition offset
@@ -18,6 +19,7 @@ loop_mount() {
 }
 
 with_raw_disk_formated() {
+    # shellcheck disable=SC2154
     format_disk_when_raw "$test_disk" "$test_disk" \
         -F -E offset="$default_part_offset" 2> /dev/null
 }
