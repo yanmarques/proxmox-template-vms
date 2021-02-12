@@ -12,7 +12,11 @@ is_raw_disk() {
 }
 
 format_linux_disk() {
-	echo 'type=83' | sfdisk "$1"
+	echo 'type=83' | sfdisk "$1" > /dev/null
+}
+
+make_silent_ext4_fs() {
+	mkfs.ext4 "$@" > /dev/null
 }
 
 format_disk_when_raw() {
@@ -36,7 +40,7 @@ format_disk_when_raw() {
 
 		# create an ext4 file system on the created partition
 		if ! exec_log "create fs on partition" \
-			mkfs.ext4 "$@" "$block_dev_partition"; then
+			make_silent_ext4_fs "$@" "$block_dev_partition"; then
 			exit 6
 		fi
 	fi
