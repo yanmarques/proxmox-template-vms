@@ -24,7 +24,7 @@ base_home_dir=${TEMPLATED_BASE_HOME_DIR:-/home}
 base_home_dir=${base_home_dir%/}
 
 # global vars
-openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
+# openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
 # linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
 
 #################################################
@@ -47,9 +47,9 @@ rw_base_home() {
 	echo "$rw_dir/${base_home_dir#/}"
 }
 
-openbsd_disks_count() {
-	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
-}
+# openbsd_disks_count() {
+# 	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
+# }
 
 # linux_disks_count() {
 # 	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
@@ -83,64 +83,64 @@ openbsd_disks_count() {
 # 	setup_vm_disk /bin/bash "$user"
 # }
 
-openbsd_start_disk() {
-	# represents an empty disk uid
-	local empty_duid="0000000000000000"
+# openbsd_start_disk() {
+# 	# represents an empty disk uid
+# 	local empty_duid="0000000000000000"
 
-	local device="$1"
-	local user="$2"
+# 	local device="$1"
+# 	local user="$2"
 	
-	# whole disk
-	local char_dev_disk=/dev/r"$device"c
+# 	# whole disk
+# 	local char_dev_disk=/dev/r"$device"c
 
-	# root partition
-	local char_dev_root=/dev/r"$device"a
+# 	# root partition
+# 	local char_dev_root=/dev/r"$device"a
 	
-	# block device
-	local block_dev_root=/dev/"$device"a
+# 	# block device
+# 	local block_dev_root=/dev/"$device"a
 
-	# grab device uid
-	local duid="$(disklabel $device | grep duid | awk -F: '{print $2}' | tr -d ' ')"
+# 	# grab device uid
+# 	local duid="$(disklabel $device | grep duid | awk -F: '{print $2}' | tr -d ' ')"
 
-	# deduce whether disk needs a partition table initialization
-	if [ "$duid" == "$empty_duid" ]; then
-		# create fdisk partition and MBR partition table
-		fdisk -iy "$char_dev_disk"
+# 	# deduce whether disk needs a partition table initialization
+# 	if [ "$duid" == "$empty_duid" ]; then
+# 		# create fdisk partition and MBR partition table
+# 		fdisk -iy "$char_dev_disk"
 
-		# create partition
-		disklabel -Aw "$char_dev_disk"
+# 		# create partition
+# 		disklabel -Aw "$char_dev_disk"
 		
-		# create file system
-		newfs "$char_dev_root"
-	fi
+# 		# create file system
+# 		newfs "$char_dev_root"
+# 	fi
 
-	# ensure mountpoint exists and mount
-	mkdir -p "$rw_dir"/
-	mount "$block_dev_root" "$rw_dir"/
+# 	# ensure mountpoint exists and mount
+# 	mkdir -p "$rw_dir"/
+# 	mount "$block_dev_root" "$rw_dir"/
 
-	setup_vm_disk /bin/ksh "$user"
-}
+# 	setup_vm_disk /bin/ksh "$user"
+# }
 
-openbsd_main() {
-	local user="$1"
+# openbsd_main() {
+# 	local user="$1"
 
-	# configure disk and mountpoints
-	openbsd_start_disk "$openbsd_dev" "$user"
+# 	# configure disk and mountpoints
+# 	openbsd_start_disk "$openbsd_dev" "$user"
 
-	# is home mounted then umount
-	if df -P | grep "$base_home_dir"; then
-		umount "$base_home_dir"
-	else
-		# make a backup of "$base_home_dir"
-		mv "$base_home_dir" "$base_home_dir".old
+# 	# is home mounted then umount
+# 	if df -P | grep "$base_home_dir"; then
+# 		umount "$base_home_dir"
+# 	else
+# 		# make a backup of "$base_home_dir"
+# 		mv "$base_home_dir" "$base_home_dir".old
 
-		# recreate base home directory
-		mkdir -m 700 "$base_home_dir"
-	fi
+# 		# recreate base home directory
+# 		mkdir -m 700 "$base_home_dir"
+# 	fi
 	
-	# bind user home
-	ln -s "$(rw_base_home)"/* "$base_home_dir"
-}
+# 	# bind user home
+# 	ln -s "$(rw_base_home)"/* "$base_home_dir"
+# }
 
 # linux_main() {
 # 	local user="$1"

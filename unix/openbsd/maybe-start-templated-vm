@@ -1,0 +1,12 @@
+#!/bin/ksh
+set -e
+
+TEMPLATED_RUNTIME_LIB_DIR=/var/lib/proxmox-templated-vms
+
+# shellcheck source=/dev/null
+. "$TEMPLATED_RUNTIME_LIB_DIR"/functions
+
+# shellcheck source=/dev/null
+. "$TEMPLATED_RUNTIME_LIB_DIR"/openbsd/functions
+
+exec entrypoint "$@"

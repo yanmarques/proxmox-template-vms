@@ -1,0 +1,79 @@
+#!/bin/bash
+
+#################################################
+# Environment vars
+#################################################
+
+openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
+
+disks_counter() {
+	sysctl hw.disknames | tr ',' '\n' | grep -c -E '(sd|wd)[0-9]{1}\:'
+}
+
+start_disk() {
+	# represents an empty disk uid
+	local empty_duid="0000000000000000"
+
+	local device="$1"
+	local user="$2"
+	
+	# whole disk
+	local char_dev_disk=/dev/r"$device"c
+
+	# root partition
+	local char_dev_root=/dev/r"$device"a
+	
+	# block device
+	local block_dev_root=/dev/"$device"a
+
+	# grab device uid
+	local duid="$(disklabel $device | grep duid | awk -F: '{print $2}' | tr -d ' ')"
+
+	# deduce whether disk needs a partition table initialization
+	if [ "$duid" == "$empty_duid" ]; then
+		# create fdisk partition and MBR partition table
+		fdisk -iy "$char_dev_disk"
+
+		# create partition
+		disklabel -Aw "$char_dev_disk"
+		
+		# create file system
+		newfs "$char_dev_root"
+	fi
+
+	# ensure mountpoint exists and mount
+	mkdir -p "$rw_dir"/
+	mount "$block_dev_root" "$rw_dir"/
+
+	setup_vm_disk /bin/ksh
+}
+
+main() {
+    on_template_or_out "$(disks_counter)"
+
+	# configure disk and mountpoints
+	start_disk "$openbsd_dev"
+
+	# is home mounted then umount
+	if df -P | grep "$base_home_dir"; then
+		umount "$base_home_dir"
+	else
+		# make a backup of "$base_home_dir"
+		mv "$base_home_dir" "$base_home_dir".old
+
+		# recreate base home directory
+		mkdir -m 700 "$base_home_dir"
+	fi
+	
+	# bind user home
+	ln -s "$(rw_base_home)"/* "$base_home_dir"
+}
+
+entrypoint() {
+    if [ $# -ne 1 ]; then
+        echo "Usage: $0 USER"
+        return 1
+    fi
+
+    templated_exec main "$1"
+}
