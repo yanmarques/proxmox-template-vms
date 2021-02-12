@@ -23,9 +23,6 @@ skel_dir=${skel_dir%/}
 base_home_dir=${TEMPLATED_BASE_HOME_DIR:-/home}
 base_home_dir=${base_home_dir%/}
 
-# global vars
-# openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
-# linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
 
 #################################################
 # Error codes
@@ -43,113 +40,16 @@ file_system_err=6
 # shellcheck disable=SC2034
 mount_err=7
 
+# initial home population with skeleton directory
+home_populate_err=8
+
+# when changing user home permissions
+change_home_perm_err=9
+
+
 rw_base_home() {
 	echo "$rw_dir/${base_home_dir#/}"
 }
-
-# openbsd_disks_count() {
-# 	sysctl hw.disknames | tr ',' '\n' | egrep '(sd|wd)[0-9]{1}\:' | wc -l
-# }
-
-# linux_disks_count() {
-# 	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
-# }
-
-# linux_start_disk() {
-# 	local device="$1"
-# 	local user="$2"
-
-# 	# block device path
-# 	local block_dev=/dev/"$device"
-
-# 	# path to disk partition
-# 	local block_dev_partition="$block_dev"1
-
-# 	# is the block device already formatted?
-# 	# no, so format it and configure it's contents
-# 	if ! blkid "$block_dev" > /dev/null; then
-# 		# create MBR partition table and one partition with the whole disk
-# 		# of the type 83 in hexcode, which means Linux type  
-# 		echo 'type=83' | sfdisk "$block_dev"
-
-# 		# create an ext4 file system on the created partition
-# 		mkfs.ext4 "$block_dev_partition"
-# 	fi
-
-# 	# ensure mountpoiunt exists then mount
-# 	mkdir -p /rw/
-# 	mount "$block_dev_partition" /rw/
-
-# 	setup_vm_disk /bin/bash "$user"
-# }
-
-# openbsd_start_disk() {
-# 	# represents an empty disk uid
-# 	local empty_duid="0000000000000000"
-
-# 	local device="$1"
-# 	local user="$2"
-	
-# 	# whole disk
-# 	local char_dev_disk=/dev/r"$device"c
-
-# 	# root partition
-# 	local char_dev_root=/dev/r"$device"a
-	
-# 	# block device
-# 	local block_dev_root=/dev/"$device"a
-
-# 	# grab device uid
-# 	local duid="$(disklabel $device | grep duid | awk -F: '{print $2}' | tr -d ' ')"
-
-# 	# deduce whether disk needs a partition table initialization
-# 	if [ "$duid" == "$empty_duid" ]; then
-# 		# create fdisk partition and MBR partition table
-# 		fdisk -iy "$char_dev_disk"
-
-# 		# create partition
-# 		disklabel -Aw "$char_dev_disk"
-		
-# 		# create file system
-# 		newfs "$char_dev_root"
-# 	fi
-
-# 	# ensure mountpoint exists and mount
-# 	mkdir -p "$rw_dir"/
-# 	mount "$block_dev_root" "$rw_dir"/
-
-# 	setup_vm_disk /bin/ksh "$user"
-# }
-
-# openbsd_main() {
-# 	local user="$1"
-
-# 	# configure disk and mountpoints
-# 	openbsd_start_disk "$openbsd_dev" "$user"
-
-# 	# is home mounted then umount
-# 	if df -P | grep "$base_home_dir"; then
-# 		umount "$base_home_dir"
-# 	else
-# 		# make a backup of "$base_home_dir"
-# 		mv "$base_home_dir" "$base_home_dir".old
-
-# 		# recreate base home directory
-# 		mkdir -m 700 "$base_home_dir"
-# 	fi
-	
-# 	# bind user home
-# 	ln -s "$(rw_base_home)"/* "$base_home_dir"
-# }
-
-# linux_main() {
-# 	local user="$1"
-
-# 	linux_start_disk "$linux_dev" "$user"
-
-# 	# make a transparent bind for user's home
-# 	mount --bind /rw/home/ /home/
-# }
 
 # configures default files on client disk
 setup_vm_disk() {
@@ -162,19 +62,19 @@ setup_vm_disk() {
 		if ! exec_log "populate home directory from: $skel_dir" \
 			cp -r "$skel_dir" "$(rw_base_home)"/"$user"; then
 
-			exit 5
+			return "$home_populate_err"
 		fi
 
 		if ! exec_log "set home user owner perm" \
 			chown -R "$user" "$(rw_base_home)"/"$user"; then
 
-			exit 6
+			return "$change_home_perm_err"
 		fi
 
 		if ! exec_log "set home user group perm" \
 			chgrp -R "$user" "$(rw_base_home)"/"$user"; then
 
-			exit 7
+			return "$change_home_perm_err"
 		fi
 
 		# maybe restore SELinux security context
@@ -244,7 +144,7 @@ is_directory_bind() {
 # mounted at /etc/wireguard/wg0.conf
 # 
 bind_files() {
-	for file in $(ls "$1"); do
+	for file in "$1"/*; do
 		# avoid an infinite loop
 		if [ -z "$file" ]; then
 			break
@@ -279,7 +179,7 @@ local_bind_file_object() {
 	# is it still a symlink? skip
 	if [ -h "$real_path" ]; then
 		echo "[-] $0: symbolic link is too depth: $path"
-		continue
+		return 1
 	fi
 
 	# find the target path to file
@@ -289,7 +189,7 @@ local_bind_file_object() {
 	target_file="/${target_file#/}"
 
 	# ensure directory exists
-	mkdir -p "$(dirname $target_file)"
+	mkdir -p "$(dirname "$target_file")"
 
 	# backup existing content and ensure target_file
 	# is not present
@@ -307,19 +207,21 @@ handle_user_config() {
 	"$rw_dir"/config/rc.local
 }
 
-on_template_or_out() {
+is_template_vm() {
 	if [ "$1" -lt 2 ]; then
 		info "seems like the template vm here, aborting..."
-		exit 0
+		return 0
 	fi
+
+	return 1
 }
 
 info() {
-	echo "$(date) [INFO] $@"
+	echo "$(date) [INFO] $*"
 }
 
 err() {
-	echo "$(date) [ERROR] $@" >> /dev/stderr
+	echo "$(date) [ERROR] $*" >> /dev/stderr
 }
 
 exec_log() {
@@ -340,13 +242,18 @@ exec_log() {
 }
 
 templated_exec() {
-	local main log
+	local start_fn 
 
 	# input argument
 	start_fn=$1
 	
 	# set global user
 	user="$2"
+
+	if [ -z "$2" ]; then
+        echo "Usage: maybe-start-templated-vm USER"
+        return 1
+    fi
 
 	{
 		info "starting templated main function"

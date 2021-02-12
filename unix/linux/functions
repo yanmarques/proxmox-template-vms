@@ -104,7 +104,7 @@ start_disk() {
 }
 
 main() {
-	on_template_or_out $(disks_counter)
+	is_template_vm "$(disks_counter)" && return 0
 
 	start_disk "$linux_dev"
 
@@ -117,10 +117,5 @@ main() {
 }
 
 entrypoint() {
-    if [ $# -ne 1 ]; then
-        echo "Usage: $0 USER"
-        return 1
-    fi
-
     templated_exec main "$1"
 }
