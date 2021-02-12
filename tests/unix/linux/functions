@@ -1,8 +1,5 @@
 #!/bin/bash 
 
-# TEMPLATED_MOCK_MKFS=dummy_mkfs
-# TEMPLATED_MOCK_MOUNT=loop_mount
-
 # sanity check, disable real device formating
 # shellcheck disable=SC2034
 TEMPLATED_DEV=/dev/null
@@ -18,4 +15,9 @@ loop_mount() {
     mntpoint="$2"
 
     mount -o rw,loop,offset="$default_part_offset" "$device" "$mntpoint"
+}
+
+with_raw_disk_formated() {
+    format_disk_when_raw "$test_disk" "$test_disk" \
+        -F -E offset="$default_part_offset" 2> /dev/null
 }

@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-Include ./tests/unix/linux/include.sh
+Include ./tests/unix/linux/functions
 
 BeforeEach "setup"
 AfterEach "teardown"
