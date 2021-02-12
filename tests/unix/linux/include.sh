@@ -24,6 +24,7 @@ start() {
     test -e "$tmp_dir/$test_home/testing-templated"
 }
 
-with_disk_started() {
-    start_disk "$test_disk"
+with_raw_disk_formated() {
+    format_disk_when_raw "$test_disk" "$test_disk" \
+        -F -E offset="$default_part_offset"
 }

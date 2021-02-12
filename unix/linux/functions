@@ -2,24 +2,44 @@
 
 linux_dev="${TEMPLATED_DEV:-/dev/sda}"
 
-# mocking functions
-make_fs=${TEMPLATED_MOCK_MKFS:-mkfs.ext4}
-mount_fs=${TEMPLATED_MOCK_MOUNT:-mount}
-
 disks_counter() {
 	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
 }
 
-# create MBR partition table and one partition with the whole disk
-# of the type 83 in hexcode, which means Linux type  
-format_disk() {
-	local block_dev="$1"
-	echo 'type=83' | sfdisk "$block_dev" > /dev/null
+is_raw_disk() {
+    blkid -p "$1" > /dev/null
+    [ "$?" -eq 2 ]
 }
 
-create_fs() {
-	local block_dev_partition="$1"
-	$make_fs "$block_dev_partition" > /dev/null
+format_linux_disk() {
+	echo 'type=83' | sfdisk "$1"
+}
+
+format_disk_when_raw() {
+	local block_dev block_dev_partition
+	block_dev="$1"
+	block_dev_partition="$2"
+
+	# allow all other arguments be passed to mkfs.ext4
+	shift
+	shift
+
+	# is the block device already formatted?
+	# no, so format it and configure it's contents
+	if is_raw_disk "$block_dev"; then
+		# create MBR partition table and one partition with the whole disk
+		# of the type 83 in hexcode, which means Linux type
+		if ! exec_log "format block device" \
+			format_linux_disk "$block_dev"; then
+			exit 5
+		fi
+
+		# create an ext4 file system on the created partition
+		if ! exec_log "create fs on partition" \
+			mkfs.ext4 "$@" "$block_dev_partition"; then
+			exit 6
+		fi
+	fi
 }
 
 start_disk() {
@@ -29,26 +49,13 @@ start_disk() {
 	# path to disk partition
 	local block_dev_partition="$block_dev"1
 
-	# is the block device already formatted?
-	# no, so format it and configure it's contents
-	if ! blkid "$block_dev" > /dev/null; then
-		local fmt_title="format block device"
-		if ! exec_log "$fmt_title"  format_disk "$block_dev"; then
-			exit 5
-		fi
-
-		# create an ext4 file system on the created partition
-		local mkfs_title="create fs on partition"
-		if ! exec_log "$mkfs_title" create_fs "$block_dev_partition"; then
-			exit 6
-		fi
-	fi
+	format_disk_when_raw "$block_dev" "$block_dev_partition"
 
 	# ensure mountpoiunt exists then mount
 	mkdir -p "$rw_dir"
 
 	# mount device disk on rw directory
-	if ! exec_log "mount device" $mount_fs "$block_dev_partition" "$rw_dir"; then
+	if ! exec_log "mount device" mount "$block_dev_partition" "$rw_dir"; then
 		exit 7
 	fi
 }

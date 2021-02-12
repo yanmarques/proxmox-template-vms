@@ -5,8 +5,10 @@ Include ./tests/unix/linux/include.sh
 BeforeEach "setup"
 AfterEach "teardown"
 
-It 'trigger disk configuration'
-    When call with_disk_started
-    The variable test_disk should satisfy mounted
+It 'format raw testing disk'
+    When call with_raw_disk_formated
+    The output should not include failed
+    The line 2 of stderr should start with "Found a dos partition table"
+    The variable test_disk should satisfy is_disk
 End
 

@@ -1,7 +1,7 @@
 #!/bin/bash 
 
-TEMPLATED_MOCK_MKFS=dummy_mkfs
-TEMPLATED_MOCK_MOUNT=loop_mount
+# TEMPLATED_MOCK_MKFS=dummy_mkfs
+# TEMPLATED_MOCK_MOUNT=loop_mount
 
 # sanity check, disable real device formating
 # shellcheck disable=SC2034
@@ -9,34 +9,13 @@ TEMPLATED_DEV=/dev/null
 
 . ./unix/linux/functions
 
-dummy_disk_partition_offset() {
-    local start_sector
-    start_sector=$(fdisk -l "$(dummy_device_name "$1")" | grep "$(dummy_first_partition "$1")" | awk '{print $2}')
-    echo $(( "$start_sector" * 512 ))
-}
-
-dummy_device_name() {
-    echo "${1%1}"
-}
-
-dummy_first_partition() {
-    echo "${1%1}"1
-}
-
-# override original mkfs.ext4
-dummy_mkfs() {
-    local device=$(dummy_device_name "$1")
-    local part1_offset=$(dummy_disk_partition_offset "$device")
-    mkfs.ext4 -F -E offset="$part1_offset" "$device" 2> /dev/null
-}
+# default first partition offset
+default_part_offset=$(( 2048 * 512 ))
 
 loop_mount() {
-    # input args
-    local device=$(dummy_device_name "$1")
-    local mntpoint="$2"
+    local device mntpoint
+    device="${1%1}"
+    mntpoint="$2"
 
-    # offset of first partition
-    local part1_offset=$(dummy_disk_partition_offset "$device")
-
-    mount -o rw,loop,offset="$part1_offset" "$device" "$mntpoint"
+    mount -o rw,loop,offset="$default_part_offset" "$device" "$mntpoint"
 }
