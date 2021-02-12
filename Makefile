@@ -1,4 +1,4 @@
-proxmox-install:
+proxmox:
 	@cd proxmox && bash manage.sh install
 
 proxmox-uninstall:
@@ -20,11 +20,12 @@ install-lib:
 clean-bin:
 	@rm -f /usr/sbin/maybe-start-templated-vm
 
-openbsd-install: install-bin
-	@install -m 555 unix/services/rc/start_templated_vm /etc/rc.d/
+openbsd: install-lib
+	@install -m 755 unix/openbsd/maybe-start-templated-vm /usr/sbin/
+	@install -m 555 unix/openbsd/start_templated_vm /etc/rc.d/
 
 openbsd-uninstall: clean-bin
 	@rcctl disable start_templated_vm
 	@rm -f /etc/rc.d/start_templated_vm
 
-.PHONY: proxmox-install proxmox-uninstall linux linux-uninstall openbsd-install openbsd-uninstall
+.PHONY: proxmox proxmox-uninstall linux linux-uninstall openbsd openbsd-uninstall
