@@ -30,6 +30,7 @@ new_rw_dir() {
 
 # set skeleton directory as temporary
 new_skel_dir() {
+    register_tmp_dir
     skel_dir="$(last_tmp_dir)"
 }
 
@@ -47,10 +48,9 @@ create_dummy_disk() {
     dd if=/dev/zero of="$test_disk" bs=1M count=10 2> /dev/null
 }
 
-create_new_user_home() {
+create_new_user_base_home() {
     register_tmp_dir
     base_home_dir="$(last_tmp_dir)"
-    test_home="$base_home_dir/$user"
 }
 
 setup() {
@@ -59,10 +59,27 @@ setup() {
     new_skel_dir
     create_dummy_disk
 
-    # create user in system
-    useradd "$user" 2> /dev/null
+    create_new_user_base_home
 
-    create_new_user_home
+    create_user() {
+        useradd -M "$user" 2> /dev/stdout
+    }
+
+    ensure_user_exists() {
+        # create user in system
+        if ! exec_log "create test user" create_user; then
+            if ! exec_log "deleting already present test user" \
+                userdel "$user"; then
+                exit 1
+            fi
+
+            if ! exec_log "trying to create test user again" create_user; then
+                exit 2
+            fi
+        fi
+    }
+
+    ensure_user_exists 2> /dev/stdout
 }
 
 teardown() {
@@ -78,13 +95,17 @@ teardown() {
         rm -rf "$directory"
     done
 
+    local test_home
+    test_home="$base_home_dir"/"$user"
+
     # safety check, when /home is being used, certainly it was not our script
     # which made the change, so be safe and keep directory
     if [[ "$test_home" == /home/* ]]; then
         err "this is weird, seems like you are not using a temporary directory as home directory"
         er "for safety purposes, the deletion of the directory will be skipped: $test_home"
     else
+        info "REMOVING USER HOME $test_home"
         # remove user home
-        rm -rf "$test_home"
+        # rm -rf "$test_home"
     fi
 }

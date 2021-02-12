@@ -20,7 +20,7 @@ skel_dir=${TEMPLATED_SKEL_DIR:-/etc/skel}
 skel_dir=${skel_dir%/}
 
 # base home directory
-base_home_dir=${TEMPLATED_BASE_HOME_DIR:-"$base_home_dir"}
+base_home_dir=${TEMPLATED_BASE_HOME_DIR:-/home}
 base_home_dir=${base_home_dir%/}
 
 # global vars
@@ -144,9 +144,17 @@ setup_vm_disk() {
 	if [ ! -d "$(rw_base_home)" ]; then
 		mkdir -p "$(rw_base_home)"
 
-		info "populating home directory using: $skel_dir"
-		cp -r "$skel_dir" "$(rw_base_home)"/"$user"	
-		chown -R "$user":"$user" "$(rw_base_home)"/"$user"
+		if ! exec_log "populate home directory from: $skel_dir" \
+			cp -r "$skel_dir" "$(rw_base_home)"/"$user"; then
+
+			exit 5
+		fi
+
+		if ! exec_log "set home user permission" \
+			chown -R "$user":"$user" "$(rw_base_home)"/"$user"; then
+
+			exit 6
+		fi
 
 		# maybe restore SELinux security context
 		if command -v restorecon > /dev/null 2>&1; then
@@ -290,24 +298,25 @@ info() {
 }
 
 err() {
-	echo "$(date) [ERROR] $@"
+	echo "$(date) [ERROR] $@" > /dev/stderr
 }
 
 exec_log() {
-	local print_args=true 
 	local title="$1"
 	local fn=$2
 	shift
 	shift
-	local args=$@
+	local args=$*
 
-	local text="$title [${args[@]}]"
+	local text="$title [$args]"
 
-	if $fn $args; then
+	if $fn "$args"; then
 		info "$text: succeded"
-	else
-		err "$text: failed"
+		return 0
 	fi
+
+	err "$text: failed"
+	return 1
 }
 
 templated_exec() {
