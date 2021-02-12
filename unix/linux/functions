@@ -43,7 +43,11 @@ format_disk_when_raw() {
 			make_silent_ext4_fs "$@" "$block_dev_partition"; then
 			exit 6
 		fi
+
+		return 0
 	fi
+
+	return 1
 }
 
 start_disk() {

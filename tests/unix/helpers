@@ -12,6 +12,13 @@ mounted() {
     df --output='target' | grep "^${mounted}$" 2> /dev/null
 }
 
+has_default_rw_directories() {
+    local expected_dirs=('config' 'binds' 'home')
+    for directory in "${expected_dirs[@]}"; do
+        test -d "$has_default_rw_directories/$directory"
+    done
+}
+
 is_disk() {
     ! is_raw_disk "$is_disk"
 }
