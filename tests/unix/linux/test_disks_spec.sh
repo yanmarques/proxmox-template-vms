@@ -5,6 +5,11 @@ Include ./tests/unix/linux/include.sh
 BeforeEach "setup"
 AfterEach "teardown"
 
+It "recognizes dummy created disk as raw"
+    When call checks_dummy_disk_is_raw
+    The status should be success
+End
+
 It 'format raw testing disk'
     When call with_raw_disk_formated
     The status should be success

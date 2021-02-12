@@ -46,3 +46,7 @@ format_an_already_formated_disk_does_nothing() {
 
     [ -e "$rw_dir"/templated-test-file ]
 }
+
+checks_dummy_disk_is_raw() {
+    is_raw_disk "$test_disk"
+}
