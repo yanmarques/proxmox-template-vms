@@ -9,4 +9,4 @@ TEMPLATED_RUNTIME_LIB_DIR=/var/lib/proxmox-templated-vms
 # shellcheck source=/dev/null
 . "$TEMPLATED_RUNTIME_LIB_DIR"/linux/functions
 
-entrypoint "$@"
+exec entrypoint "$@"
