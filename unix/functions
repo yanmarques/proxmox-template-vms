@@ -27,6 +27,21 @@ base_home_dir=${base_home_dir%/}
 openbsd_dev="${TEMPLATE_OPENBSD_DEV:-sd0}"
 # linux_dev="${TEMPLATE_LINUX_DEV:-sda}"
 
+#################################################
+# Error codes
+#################################################
+
+# operations on formating a raw disk
+# shellcheck disable=SC2034
+format_disk_err=5
+
+# file system creation
+# shellcheck disable=SC2034
+file_system_err=6
+
+# mounting disks
+# shellcheck disable=SC2034
+mount_err=7
 
 rw_base_home() {
 	echo "$rw_dir/${base_home_dir#/}"

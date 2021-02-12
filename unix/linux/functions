@@ -12,6 +12,8 @@ is_raw_disk() {
 }
 
 format_linux_disk() {
+	# create MBR partition table and one partition with the whole disk
+	# of the type 83 in hexcode, which means Linux type
 	echo 'type=83' | sfdisk "$1" > /dev/null
 }
 
@@ -31,40 +33,68 @@ format_disk_when_raw() {
 	# is the block device already formatted?
 	# no, so format it and configure it's contents
 	if is_raw_disk "$block_dev"; then
-		# create MBR partition table and one partition with the whole disk
-		# of the type 83 in hexcode, which means Linux type
 		if ! exec_log "format block device" \
 			format_linux_disk "$block_dev"; then
-			exit 5
+
+			# shellcheck disable=SC2154
+			return "$format_disk_err"
 		fi
 
 		# create an ext4 file system on the created partition
 		if ! exec_log "create fs on partition" \
 			make_silent_ext4_fs "$@" "$block_dev_partition"; then
-			exit 6
+
+			# shellcheck disable=SC2154
+			return "$file_system_err"
 		fi
-
-		return 0
 	fi
-
-	return 1
 }
 
 start_disk() {
 	# block device path
-	local block_dev="$1"
+	local block_dev block_dev_partition format_opts mount_opts
+	block_dev="$1"
+	shift
+	
+	# default path to disk partition
+	block_dev_partition="$block_dev"1
 
-	# path to disk partition
-	local block_dev_partition="$block_dev"1
+	while [[ "$1" == -* ]]; do
+		case "$1" in
+			-B)
+				block_dev_partition="$2"
+				;;
+			--format-opts)
+				format_opts="$2"
+				;;
+			--mount-opts)
+				mount_opts="$2"
+				;;
+			*) ;;
+		esac
 
-	format_disk_when_raw "$block_dev" "$block_dev_partition"
+		shift
+		shift
+	done
+	
+	# shellcheck disable=2086
+	if ! format_disk_when_raw "$block_dev" \
+		"$block_dev_partition" ${format_opts}; then
+
+		return "$?"
+	fi
 
 	# ensure mountpoiunt exists then mount
+	# shellcheck disable=SC2154
 	mkdir -p "$rw_dir"
 
 	# mount device disk on rw directory
-	if ! exec_log "mount device" mount "$block_dev_partition" "$rw_dir"; then
-		exit 7
+	# shellcheck disable=2086
+	if ! exec_log "mount device" \
+		mount ${mount_opts} "$block_dev_partition" "$rw_dir"; then
+
+		# shellcheck disable=SC2154
+		return "$mount_err"
 	fi
 }
 

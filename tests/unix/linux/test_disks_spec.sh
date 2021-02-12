@@ -50,8 +50,33 @@ Describe "format_disk_when_raw()"
 
         It "does not format the disk"
             When call with_raw_disk_formated
-            The status should eq 1
+            The entire output should eq ''
         End
+    End
+
+    It 'fails with format error code'
+        # fake a sfdisk error 
+        sfdisk() {
+            return 1
+        }
+
+        When call with_raw_disk_formated
+
+        # shellcheck disable=SC2154
+        The status should eq "$format_disk_err"
+    End
+
+    It 'fails with fs error code'
+        # fake a mkfs error
+        Mock mkfs.ext4
+            exit 1
+        End
+
+        When call with_raw_disk_formated
+
+        # shellcheck disable=SC2154
+        The status should eq "$file_system_err"
+        The output should not include failed
     End
 End
 
@@ -72,3 +97,31 @@ Describe "is_raw_disk()"
     End
 End
 
+
+Describe "start_disk()" mount_mock
+    Context "when format and mount a dummy disk"
+        setup_rw_device() {
+            # shellcheck disable=SC2154
+            start_disk "$test_disk" -B "$test_disk" \
+                --format-opts "$default_mkfs_opts" \
+                --mount-opts "$default_loop_mount_opts" > /dev/null 2>&1
+        }
+
+        It "formats and mounts"
+            When call setup_rw_device
+            The variable rw_dir should satisfy mounted
+        End
+
+        It "fails with mount status code"
+            # fake mount error
+            mount() {
+                return 1
+            }
+
+            When call setup_rw_device
+            
+            # shellcheck disable=SC2154
+            The status should eq "$mount_err"
+        End
+    End
+End
