@@ -1,9 +1,13 @@
 #!/bin/bash
 
+#################################################
+# Environment vars
+#################################################
+
 linux_dev="${TEMPLATED_DEV:-/dev/sda}"
 
 disks_counter() {
-	fdisk -l | egrep 'Disk /dev/(sd|hd)[a-z]{1}' | wc -l
+	fdisk -l | grep -c -E 'Disk /dev/(sd|hd)[a-z]{1}'
 }
 
 is_raw_disk() {
@@ -51,8 +55,9 @@ format_disk_when_raw() {
 }
 
 start_disk() {
-	# block device path
 	local block_dev block_dev_partition format_opts mount_opts
+
+	# block device path
 	block_dev="$1"
 	shift
 	
