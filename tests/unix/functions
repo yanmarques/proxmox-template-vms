@@ -102,10 +102,9 @@ teardown() {
     # which made the change, so be safe and keep directory
     if [[ "$test_home" == /home/* ]]; then
         err "this is weird, seems like you are not using a temporary directory as home directory"
-        er "for safety purposes, the deletion of the directory will be skipped: $test_home"
+        err "for safety purposes, the deletion of the directory will be skipped: $test_home"
     else
-        info "REMOVING USER HOME $test_home"
         # remove user home
-        # rm -rf "$test_home"
+        exec_log "remove user test home dir" rm -rf "$test_home"
     fi
 }
