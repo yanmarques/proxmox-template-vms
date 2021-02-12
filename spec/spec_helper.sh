@@ -24,4 +24,8 @@ spec_helper_loaded() {
 spec_helper_configure() {
   # Available functions: import, before_each, after_each, before_all, after_all
   : import 'support/custom_matcher'
+
+  # configure user hooks
+  : before_all "ensure_user_test_exists"
+  : after_all "ensure_user_test_missing"
 }

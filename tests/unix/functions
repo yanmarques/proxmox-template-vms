@@ -58,42 +58,32 @@ setup() {
     new_rw_dir
     new_skel_dir
     create_dummy_disk
+}
 
+ensure_user_test_exists() {
     create_new_user_base_home
 
-    create_user() {
-        useradd -M "$user" >> /dev/stdout 2&
-    }
-
-    ensure_user_exists() {
+    {
         # create user in system
-        if ! exec_log "create test user" create_user; then
+        if ! exec_log "create test user" useradd -M "$user"; then
             if ! exec_log "deleting already present test user" \
                 userdel "$user"; then
+
                 exit 1
             fi
 
-            if ! exec_log "trying to create test user again" create_user; then
+            if ! exec_log "trying to create test user again" \
+                useradd -M "$user"; then
+
                 exit 2
             fi
         fi
-    }
-
-    ensure_user_exists >> /dev/stdout 2&
+    } >> /dev/stdout 2>&1
 }
 
-teardown() {
+ensure_user_test_missing() {
     # purge user from system
     userdel "$user" 2> /dev/null
-
-    # this is generally being mounted, so try to umount it
-    umount "$rw_dir" 2> /dev/null || true
-
-    # remove every registered directory
-    for directory in "${temp_dirs[@]}"; do
-        umount "$directory" 2> /dev/null || true
-        rm -rf "$directory"
-    done
 
     local test_home
     test_home="$base_home_dir"/"$user"
@@ -107,4 +97,15 @@ teardown() {
         # remove user home
         exec_log "remove user test home dir" rm -rf "$test_home"
     fi
+}
+
+teardown() {
+    # this is generally being mounted, so try to umount it
+    umount "$rw_dir" 2> /dev/null || true
+
+    # remove every registered directory
+    for directory in "${temp_dirs[@]}"; do
+        umount "$directory" 2> /dev/null || true
+        rm -rf "$directory"
+    done
 }
