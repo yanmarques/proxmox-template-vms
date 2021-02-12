@@ -2,7 +2,7 @@
 
 # shellcheck shell=bash
 
-unset user rw_dir
+unset user
 
 #################################################
 # Environment vars
@@ -22,6 +22,10 @@ skel_dir=${skel_dir%/}
 # base home directory
 base_home_dir=${TEMPLATED_BASE_HOME_DIR:-/home}
 base_home_dir=${base_home_dir%/}
+
+# default binary used on rc script
+default_binary=${TEMPLATED_BINARY:-/bin/bash}
+default_binary=${base_home_dir%/}
 
 
 #################################################
@@ -51,36 +55,49 @@ rw_base_home() {
 	echo "$rw_dir/${base_home_dir#/}"
 }
 
+fill_skeleton_directory() {
+	cp -r "$skel_dir" "$(rw_base_home)"/"$user"
+}
+
+fix_user_dir_permission() {
+	chown -R "$user":"$user" "$(rw_base_home)"/"$user"
+}
+
+populate_home_dir() {
+	mkdir -p "$(rw_base_home)"
+
+	if ! exec_log "populate home directory from: $skel_dir" \
+		fill_skeleton_directory; then
+
+		return "$home_populate_err"
+	fi
+
+	if ! exec_log "fix home user dir permissions" \
+		fix_user_dir_permission; then
+
+		return "$change_home_perm_err"
+	fi
+}
+
+handle_user_data_created() {
+	:
+}
+
 # configures default files on client disk
-setup_vm_disk() {
-	local binary="$1"
+setup_vm_user_data() {
+	local exit_status
+	exit_status=0
 
 	# create user home directory
 	if [ ! -d "$(rw_base_home)" ]; then
-		mkdir -p "$(rw_base_home)"
+		populate_home_dir
+		exit_status="$?"
 
-		if ! exec_log "populate home directory from: $skel_dir" \
-			cp -r "$skel_dir" "$(rw_base_home)"/"$user"; then
-
-			return "$home_populate_err"
+		if [ "$exit_status" -ne 0 ]; then
+			return "$exit_status"
 		fi
 
-		if ! exec_log "set home user owner perm" \
-			chown -R "$user" "$(rw_base_home)"/"$user"; then
-
-			return "$change_home_perm_err"
-		fi
-
-		if ! exec_log "set home user group perm" \
-			chgrp -R "$user" "$(rw_base_home)"/"$user"; then
-
-			return "$change_home_perm_err"
-		fi
-
-		# maybe restore SELinux security context
-		if command -v restorecon > /dev/null 2>&1; then
-			restorecon -R "$(rw_base_home)"
-		fi
+		handle_user_data_created
 	fi
 
 	# configuration files
@@ -90,7 +107,7 @@ setup_vm_disk() {
 
 	if [ ! -f "$rw_dir"/config/rc.local ]; then
 		cat <<EOF > "$rw_dir"/config/rc.local
-#!$binary
+#!$default_binary
 # Put commands to execute with systemd service.
 # Eg.: systemctl start openvpn-client
 EOF
@@ -202,7 +219,7 @@ local_bind_file_object() {
 }
 
 # execute this at startup
-handle_user_config() {
+start_user_custom_config() {
 	bind_files "$rw_dir"/binds
 	"$rw_dir"/config/rc.local
 }
@@ -225,39 +242,23 @@ err() {
 }
 
 exec_log() {
-	local title="$1"
-	local fn=$2
+	local exit_status title fn text
+	title="$1"
+	fn=$2
 	shift
 	shift
 
-	local text="$title [$fn $*]"
+	text="$title [$fn $*]"
 
-	if $fn "$@"; then
+	# call function
+	$fn "$@"
+	exit_status="$?"
+
+	if [ "$exit_status" -eq 0 ]; then
 		info "$text: succeded"
-		return 0
+	else
+		err "$text: failed"
 	fi
 
-	err "$text: failed"
-	return 1
-}
-
-templated_exec() {
-	local start_fn 
-
-	# input argument
-	start_fn=$1
-	
-	# set global user
-	user="$2"
-
-	if [ -z "$2" ]; then
-        echo "Usage: maybe-start-templated-vm USER"
-        return 1
-    fi
-
-	{
-		info "starting templated main function"
-		$start_fn
-		handle_user_config
-	} >> "$log_file" 2>&1
+	return "$exit_status"
 }

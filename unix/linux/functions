@@ -103,19 +103,14 @@ start_disk() {
 	fi
 }
 
-main() {
-	is_template_vm "$(disks_counter)" && return 0
-
-	start_disk "$linux_dev"
-
-	if ! exec_log "disk setup" setup_vm_disk /bin/bash; then
-		exit 8
+handle_user_data_created() {
+	# maybe restore SELinux security context
+	if command -v restorecon > /dev/null 2>&1; then
+		restorecon -R "$(rw_base_home)"
 	fi
-
-	# make a transparent bind for user's home
-	mount --bind "$(rw_base_home)" "$base_home_dir"
 }
 
-entrypoint() {
-    templated_exec main "$1"
+mount_strategy() {
+	# make a transparent bind for user's home
+	mount --bind "$(rw_base_home)" "$base_home_dir"
 }

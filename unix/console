@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# shellcheck shell=bash
+
+pre_start() {
+	info "starting templated main function"
+}
+
+start_exec() {
+    is_template_vm "$(disks_counter)" && return 0
+
+    exec_log "pre-start hook" pre_start || return "$?"
+
+	exec_log "formats and mounts disk partition" \
+        ensure_formated_and_mounted || return "$?"
+
+	exec_log "initializes user data" \
+        setup_vm_user_data || return "$?"
+
+	exec_or_fail "mounts user home directory" \
+        mount_strategy "$(rw_base_home)" "$base_home_dir" || return "$?"
+
+    exec_log "post-start hook" post_start || return "$?"
+}
+
+post_start() {
+	start_user_custom_config
+}
+
+templated_exec() {
+	# set global user
+	user="$1"
+
+	if [ -z "$user" ]; then
+        echo "Usage: maybe-start-templated-vm USER"
+        return 1
+    fi
+
+    exec_log "main function" start_exec >> "$log_file" 2>&1
+}

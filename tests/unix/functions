@@ -6,12 +6,11 @@
 
 # send logs to console
 # shellcheck disable=SC2034
-TEMPLATED_LOG_FILE=/dev/stdout
+TEMPLATED_LOG_FILE=/dev/null
 
 # shellcheck disable=SC1091
-source ./unix/functions
-
-# shellcheck disable=SC1091
+. ./unix/functions
+. ./unix/console
 . ./tests/unix/helpers
 
 unset test_disk test_home
