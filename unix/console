@@ -2,6 +2,13 @@
 
 # shellcheck shell=bash
 
+#################################################
+# Environment vars
+#################################################
+
+# where log to
+log_file="${TEMPLATED_LOG_FILE:-/var/log/templated.log}"
+
 pre_start() {
 	info "starting templated main function"
 }
@@ -17,8 +24,8 @@ start_exec() {
 	exec_log "initializes user data" \
         setup_vm_user_data || return "$?"
 
-	exec_or_fail "mounts user home directory" \
-        mount_strategy "$(rw_base_home)" "$base_home_dir" || return "$?"
+	exec_log "mounts user home directory" \
+        mount_user_home_dir || return "$?"
 
     exec_log "post-start hook" post_start || return "$?"
 }

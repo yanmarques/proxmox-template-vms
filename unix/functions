@@ -12,9 +12,6 @@ unset user
 rw_dir=${TEMPLATED_RW_DIR:-/rw}
 rw_dir=${rw_dir%/}
 
-# where log to
-log_file="${TEMPLATED_LOG_FILE:-/var/log/templated.log}"
-
 # skeleton directory for user
 skel_dir=${TEMPLATED_SKEL_DIR:-/etc/skel}
 skel_dir=${skel_dir%/}
@@ -56,6 +53,7 @@ rw_base_home() {
 }
 
 fill_skeleton_directory() {
+	# shellcheck disable=SC2154
 	cp -r "$skel_dir" "$(rw_base_home)"/"$user"
 }
 
@@ -214,13 +212,18 @@ local_bind_file_object() {
 
 	# call arbitrary mount function to create link
 	# between source and target
-	mount_strategy "$real_path" "$target_file"
+	exec_log "binding user file" \
+		mount_strategy "$real_path" "$target_file"
+}
+
+mount_user_home_dir() {
+	mount_strategy "$(rw_base_home)" "$base_home_dir"
 }
 
 # execute this at startup
 start_user_custom_config() {
-	bind_files "$rw_dir"/binds
-	"$rw_dir"/config/rc.local
+	exec_log "binding user files" bind_files "$rw_dir"/binds
+	exec_log "calling user rc script" "$rw_dir"/config/rc.local
 }
 
 is_template_vm() {
