@@ -83,7 +83,7 @@ setup_vm_user_data() {
 		exec_log "home directory initialization" \
 			populate_home_dir || return "$?"
 
-		exec_log "calling post-home-dir-populated hook" 
+		exec_log "calling post-home-dir-populated hook" \
 			post_home_dir_populated || return "$?"
 	fi
 

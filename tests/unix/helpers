@@ -12,11 +12,22 @@ mounted() {
     df --output='target' | grep "^${mounted}$" 2> /dev/null
 }
 
-has_default_rw_directories() {
+has_default_rw_files() {
     local expected_dirs=('config' 'binds' 'home')
+    local target
+    target="$rw_dir"
+
     for directory in "${expected_dirs[@]}"; do
-        test -d "$has_default_rw_directories/$directory"
+        test -d "$target/$directory" || err "missing dir: $directory"
     done
+
+    test -f "$target"/config/rc.local || err "missing rc.local"
+    test "$(stat --format=%a "$target"/config/rc.local)" = 755 || \
+        err "wrong rc.local permission" 
+
+    test -f "$target"/config/bind-dirs.manifest || err "missing bind-dirs.manifest"
+    test "$(stat --format=%a "$target"/config/bind-dirs.manifest)" = 644 || \
+        err "wrong bind-dirs.manifest permission"
 }
 
 is_disk() {
