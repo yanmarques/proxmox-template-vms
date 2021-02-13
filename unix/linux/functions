@@ -107,10 +107,11 @@ ensure_formated_and_mounted() {
 	start_disk "$linux_dev" "$@"
 }
 
-handle_user_data_created() {
+post_home_dir_populated() {
 	# maybe restore SELinux security context
 	if command -v restorecon > /dev/null 2>&1; then
-		restorecon -R "$(rw_base_home)"
+		# shellcheck disable=SC2154
+		restorecon -R "$rw_base_home"
 	fi
 }
 

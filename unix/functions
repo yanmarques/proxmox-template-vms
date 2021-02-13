@@ -24,6 +24,13 @@ base_home_dir=${base_home_dir%/}
 default_binary=${TEMPLATED_BINARY:-/bin/bash}
 default_binary=${base_home_dir%/}
 
+#################################################
+# Runtime vars
+#################################################
+
+# user home directory location on rw device 
+rw_base_home="$rw_dir"/home
+
 
 #################################################
 # Error codes
@@ -48,21 +55,17 @@ home_populate_err=8
 change_home_perm_err=9
 
 
-rw_base_home() {
-	echo "$rw_dir/${base_home_dir#/}"
-}
-
 fill_skeleton_directory() {
 	# shellcheck disable=SC2154
-	cp -r "$skel_dir" "$(rw_base_home)"/"$user"
+	cp -r "$skel_dir" "$rw_base_home"/"$user"
 }
 
 fix_user_dir_permission() {
-	chown -R "$user":"$user" "$(rw_base_home)"/"$user"
+	chown -R "$user":"$user" "$rw_base_home"/"$user"
 }
 
 populate_home_dir() {
-	mkdir -p "$(rw_base_home)"
+	mkdir -p "$rw_base_home"
 
 	if ! exec_log "populate home directory from: $skel_dir" \
 		fill_skeleton_directory; then
@@ -77,25 +80,19 @@ populate_home_dir() {
 	fi
 }
 
-handle_user_data_created() {
+post_home_dir_populated() {
 	:
 }
 
 # configures default files on client disk
 setup_vm_user_data() {
-	local exit_status
-	exit_status=0
-
 	# create user home directory
-	if [ ! -d "$(rw_base_home)" ]; then
-		populate_home_dir
-		exit_status="$?"
+	if [ ! -d "$rw_base_home" ]; then
+		exec_log "home directory initialization" \
+			populate_home_dir || return "$?"
 
-		if [ "$exit_status" -ne 0 ]; then
-			return "$exit_status"
-		fi
-
-		handle_user_data_created
+		exec_log "calling post-home-dir-populated hook" 
+			post_home_dir_populated || return "$?"
 	fi
 
 	# configuration files
@@ -217,7 +214,7 @@ local_bind_file_object() {
 }
 
 mount_user_home_dir() {
-	mount_strategy "$(rw_base_home)" "$base_home_dir"
+	mount_strategy "$rw_base_home" "$base_home_dir"
 }
 
 # execute this at startup
