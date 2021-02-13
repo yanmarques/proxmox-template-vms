@@ -107,27 +107,6 @@ EOF
 	fi
 }
 
-# try to resolve a path to it's real path
-# 
-# it may not be able to deliver when the link 
-# level is too high. in order to address this problem, 
-# one may specify as second argument the maximum depth 
-maybe_resolve_symlink_path() {
-	local path max_depth symlink_level_counter real_path
-
-	path="$1"
-	max_depth="${2:-15}"
-	symlink_level_counter="0"
-
-	while [ -h "$path" ] && [ "$symlink_level_counter" -lt "$max_depth" ]; do
-		real_path="$(realpath "$path")"
-		path="$real_path"
-		symlink_level_counter="$(( symlink_level_counter + 1 ))"
-	done
-
-	echo "$path"
-}
-
 is_directory_bind() {
 	local sufix_transform="/${1#/}"
 	local sufix_and_prefix="${sufix_transform%/}/"
@@ -178,11 +157,11 @@ local_bind_file_object() {
 	local path="$1"
 
 	# try to find the real path
-	real_path="$(maybe_resolve_symlink_path "$path")"
+	real_path="$(realpath "$path")"
 	
-	# is it still a symlink? skip
-	if [ -h "$real_path" ]; then
-		echo "[-] $0: symbolic link is too depth: $path"
+	# ensure path exists
+	if [ ! -e "$real_path" ]; then
+		err "file not found: $path"
 		return 1
 	fi
 
