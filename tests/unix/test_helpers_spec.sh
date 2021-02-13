@@ -1,7 +1,5 @@
 # shellcheck shell=bash
 
-Include ./tests/unix/linux/functions
-
 BeforeEach "setup"
 AfterEach "teardown"
 
@@ -47,4 +45,28 @@ Describe "start_exec()"
         When call templated_exec "some"
         The status should be success
     End
+End
+
+Describe "exec_log()"
+
+    It "shows info with success status code"
+        tester() {
+            :
+        }
+
+        When call exec_log "templated-test" tester
+        The status should be success
+        The output should include "templated-test [tester]: succeded"
+    End
+
+    It "shows error and exit with function custom status code"
+        tester() {
+            return 123
+        }
+
+        When call exec_log "templated-test" tester
+        The status should eq 123
+        The stderr should include "templated-test [tester]: failed"
+    End
+
 End

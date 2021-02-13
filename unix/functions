@@ -247,7 +247,14 @@ exec_log() {
 	shift
 	shift
 
-	text="$title [$fn $*]"
+	text="$title [$fn"
+
+	# only put arguments when present
+	if [ $# -ne 0 ]; then
+		text+=" $*]"
+	else
+		text+="]"
+	fi
 
 	# call function
 	$fn "$@"
