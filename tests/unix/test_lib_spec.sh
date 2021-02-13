@@ -45,4 +45,20 @@ Describe "setup_vm_user_data()"
         The entire output should not include failed
         Assert same_contents "$rw_dir"/config/rc.local "$rw_dir"/config/bind-dirs.manifest
     End
+
+    It "only calls hook when home directory is missing"
+        # ensure it does not gets here
+        post_home_dir_populated() {
+            return 1
+        }
+
+        setup_with_home_dir_present() {
+            mkdir "$(rw_base_home)"
+            setup_vm_user_data
+        }
+
+        When call setup_with_home_dir_present
+        The status should be success
+        The entire output should not include failed
+    End
 End
