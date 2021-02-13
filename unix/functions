@@ -24,13 +24,6 @@ base_home_dir=${base_home_dir%/}
 default_binary=${TEMPLATED_BINARY:-/bin/bash}
 default_binary=${base_home_dir%/}
 
-#################################################
-# Runtime vars
-#################################################
-
-# user home directory location on rw device 
-rw_base_home="$rw_dir"/home
-
 
 #################################################
 # Error codes
@@ -54,30 +47,29 @@ home_populate_err=8
 # when changing user home permissions
 change_home_perm_err=9
 
+rw_base_home() {
+	# user home directory location on rw device
+	echo "$rw_dir"/home
+}
 
 fill_skeleton_directory() {
 	# shellcheck disable=SC2154
-	cp -r "$skel_dir" "$rw_base_home"/"$user"
+	cp -a "$skel_dir" "$(rw_base_home)"/"$user"
 }
 
 fix_user_dir_permission() {
-	chown -R "$user":"$user" "$rw_base_home"/"$user"
+	chown -R "$user" "$(rw_base_home)"/"$user" && \
+		chgrp -R "$user" "$(rw_base_home)"/"$user"
 }
 
 populate_home_dir() {
-	mkdir -p "$rw_base_home"
+	mkdir -p "$(rw_base_home)"
 
-	if ! exec_log "populate home directory from: $skel_dir" \
-		fill_skeleton_directory; then
+	exec_log "populate home directory from: $skel_dir" \
+		fill_skeleton_directory || return "$home_populate_err"
 
-		return "$home_populate_err"
-	fi
-
-	if ! exec_log "fix home user dir permissions" \
-		fix_user_dir_permission; then
-
-		return "$change_home_perm_err"
-	fi
+	exec_log "fix home user dir permissions" \
+		fix_user_dir_permission || return "$change_home_perm_err"
 }
 
 post_home_dir_populated() {
@@ -87,7 +79,7 @@ post_home_dir_populated() {
 # configures default files on client disk
 setup_vm_user_data() {
 	# create user home directory
-	if [ ! -d "$rw_base_home" ]; then
+	if [ ! -d "$(rw_base_home)" ]; then
 		exec_log "home directory initialization" \
 			populate_home_dir || return "$?"
 
@@ -214,7 +206,7 @@ local_bind_file_object() {
 }
 
 mount_user_home_dir() {
-	mount_strategy "$rw_base_home" "$base_home_dir"
+	mount_strategy "$(rw_base_home)" "$base_home_dir"
 }
 
 # execute this at startup

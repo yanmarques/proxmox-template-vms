@@ -26,6 +26,10 @@ spec_helper_configure() {
   : import 'support/custom_matcher'
 
   # configure user hooks
-  : before_all "ensure_user_test_exists"
-  : after_all "ensure_user_test_missing"
+  before_all "ensure_user_test_exists"
+  after_all "ensure_user_test_missing"
+
+  # configure test hooks
+  before_each "setup"
+  after_each "teardown"
 }

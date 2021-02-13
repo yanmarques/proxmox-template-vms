@@ -30,3 +30,13 @@ same_contents() {
 
     [ "$(checksum "$1")" == "$(checksum "$2")" ]
 }
+
+is_owner() {
+    local perm uid gid
+
+    uid="$(id -u "$1")"
+    gid="$(id -g "$1")"
+    perm="$(stat --format="%u %g" "$2")"
+
+    [ "$uid $gid" == "$perm" ]
+}

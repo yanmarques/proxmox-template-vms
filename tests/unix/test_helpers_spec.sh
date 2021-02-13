@@ -1,8 +1,5 @@
 # shellcheck shell=bash
 
-BeforeEach "setup"
-AfterEach "teardown"
-
 Describe "templated_exec()"
 
     It "fails when missing user input"

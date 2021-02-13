@@ -2,9 +2,6 @@
 
 Include ./tests/unix/linux/functions
 
-BeforeEach "setup"
-AfterEach "teardown"
-
 Describe "disks_counter()"
     It "1 scsi disk"
         Mock fdisk
