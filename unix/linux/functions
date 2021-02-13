@@ -115,17 +115,40 @@ handle_user_data_created() {
 }
 
 mount_strategy() {
-	local src target opts
+	local src target args mnt_opts
 
 	src="$1"
 	target="$2"
-	opts=
+	args="$3"
+	mnt_opts=
 
 	# is not a block device, so will
 	# bind mount it
-	if [ ! -b "$src" ]; then
-		opts="--bind"
+	#
+	# if receives a "--force-disk" argument
+	# then unconditionally consider source as a disk
+	if [ ! -b "$src" ] && [ ! "$args" == "--force-disk" ]; then
+		mnt_opts="--bind"
+	
+		# mount point is not present
+		if [ ! -e "$target" ]; then
+			# ensure target's root directory exists
+			mkdir -p "$(dirname "$target")"
+
+			# is it a file
+			if [ -f "$src" ]; then
+				touch "$target"
+
+			# is it a directory
+			elif [ -d "$src" ]; then
+				mkdir -p "$target"
+
+			# alert user and hope for the best
+			else
+				err "target mountpoint seems to be invalid"
+			fi
+		fi
 	fi
 
-	mount "$opts" "$src" "$target"
+	mount ${mnt_opts} "$src" "$target"
 }

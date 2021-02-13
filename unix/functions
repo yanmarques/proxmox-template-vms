@@ -205,17 +205,16 @@ local_bind_file_object() {
 	# ensure it is an absolute path to the filesystem
 	target_file="/${target_file#/}"
 
-	# ensure directory exists
-	mkdir -p "$(dirname "$target_file")"
-
 	# backup existing content and ensure target_file
 	# is not present
 	if [ -e "$target_file" ]; then
-		mv --force "$target_file" "${target_file%/}.old"
+		exec_log "backup existing target: $target_file" \
+			mv --force "$target_file" "${target_file%/}.old" || return "$file_system_err"
 	fi
 
-	# create a symbolic link
-	ln -s "$real_path" "$target_file"
+	# call arbitrary mount function to create link
+	# between source and target
+	mount_strategy "$real_path" "$target_file"
 }
 
 # execute this at startup
