@@ -14,7 +14,11 @@ pre_start() {
 }
 
 start_exec() {
-    exec_log "pre-start hook" pre_start || return "$?"
+    exec_log "pre-start hook" pre_start || return
+
+    exec_log "receiving host" receive_host_data || return
+
+    exec_log "checking whether is template-vm" is_template_vm && return 0
 
 	exec_log "formats and mounts disk partition" \
         ensure_formated_and_mounted || return "$?"

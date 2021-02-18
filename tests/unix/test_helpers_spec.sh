@@ -29,13 +29,17 @@ Describe "start_exec()"
     End
 
     It "exits when detect a template vm"
+        receive_host_data() {
+            :
+        }
+
         # fake a template vm
-        disks_counter() {
-            echo 1
+        is_template_vm() {
+            return 0
         }
 
         # this should never be called
-        pre_start() {
+        ensure_formated_and_mounted() {
             return 11
         }
 

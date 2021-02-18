@@ -4,8 +4,17 @@ list_scsi_disks() {
 	lsblk --output PATH --scsi | sed 1d
 }
 
+list_all_disks() {
+	# --exclude 252 (SWAP)
+	lsblk --output TYPE,PATH --exclude 252 | \
+		grep '^disk' | awk '{print $2}'
+}
+
 is_raw_disk() {
-    blkid -p "$1" > /dev/null
+	local disk
+	disk="${1:?}"
+
+    blkid -p "$disk" > /dev/null
     [ "$?" -eq 2 ]
 }
 
@@ -124,7 +133,7 @@ detect_partition() {
 }
 
 detect_raw_disk() {
-	for disk in $(list_scsi_disks); do
+	for disk in $(list_all_disks); do
 		is_raw_disk "$disk" && echo "$disk"
 	done
 }

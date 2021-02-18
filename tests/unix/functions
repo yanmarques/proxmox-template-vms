@@ -33,6 +33,12 @@ new_skel_dir() {
     skel_dir="$(last_tmp_dir)"
 }
 
+# set runtime directory as temporary
+new_skel_dir() {
+    register_tmp_dir
+    runtime_dir="$(last_tmp_dir)"
+}
+
 register_tmp_dir() {
     local directory
     directory=$(mktemp --directory)

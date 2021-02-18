@@ -187,7 +187,7 @@ Describe "ensure_formated_and_mounted()"
         The output should eq "test-device -B test-device1"
     End
 
-    It "ignore many disks when has partition" current:test
+    It "ignore many disks when has partition"
         detect_partition() {
             echo test-partition
         }
@@ -214,5 +214,28 @@ Describe "ensure_formated_and_mounted()"
         The status should eq 22             
         The output should eq "templated-test"
 
+    End
+End
+
+Describe "receive_host_data()"
+    It "calls mount with last scsi disk"
+        mount_strategy() {
+            # shellcheck disable=SC2034
+            args="$*"
+            %preserve args
+        }
+
+        list_scsi_disks() {
+            echo some
+            echo bar
+            echo foo
+        }
+
+        When call receive_host_data
+        The status should be success
+        The output should include "succeded" 
+
+        # shellcheck disable=SC2154
+        The variable args should eq "foo $runtime_dir" 
     End
 End

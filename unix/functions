@@ -24,6 +24,10 @@ base_home_dir=${base_home_dir%/}
 default_binary=${TEMPLATED_BINARY:-/bin/bash}
 default_binary=${base_home_dir%/}
 
+# default runtime path where host data is stored
+runtime_dir=${TEMPLATED_RUNTIME_DIR:-/var/run/proxmox-templated-vms}
+runtime_dir=${runtime_dir%/}
+
 
 #################################################
 # Error codes
@@ -247,6 +251,28 @@ ensure_formated_and_mounted() {
 	
 	# disk is raw, will use the first partition
 	start_disk "$disk" -B "$disk"1 "$@"
+}
+
+receive_host_data() {
+	local disk
+
+	# get last scsi disk
+	disk="$(list_scsi_disks | tail -n 1)"
+
+	if [ -z "$disk" ]; then
+		err "failed to receive host data, missing scsi disk"
+		return 1
+	fi 
+
+	# ensure mountpoint exists
+	mkdir -p "$runtime_dir"
+
+	exec_log "mount host disk" mount_strategy "$disk" "$runtime_dir" || \
+		return "$mount_err"
+}
+
+is_template_vm() {
+	[ -f "$runtime_dir"/template-vm ]
 }
 
 info() {
