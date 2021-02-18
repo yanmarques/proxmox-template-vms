@@ -2,30 +2,6 @@
 
 Include ./tests/unix/linux/functions
 
-Describe "disks_counter()"
-    It "1 scsi disk"
-        Mock lsblk
-            echo title
-            echo ""
-        End
-
-        When call disks_counter
-        The output should eq "1"
-    End
-
-    It "3 scsi disks"
-        Mock lsblk
-            echo title
-            echo ""
-            echo ""
-            echo ""
-        End
-
-        When call disks_counter
-        The output should eq "3"
-    End
-End
-
 Describe "format_disk_when_raw()"
     It 'formats the disk'
         When call with_raw_disk_formated

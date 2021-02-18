@@ -1,9 +1,5 @@
 #!/bin/bash
 
-disks_counter() {
-	list_scsi_disks | wc -l
-}
-
 list_scsi_disks() {
 	lsblk --output PATH --scsi | sed 1d
 }

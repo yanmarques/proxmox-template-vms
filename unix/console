@@ -14,8 +14,6 @@ pre_start() {
 }
 
 start_exec() {
-    is_template_vm "$(disks_counter)" && return 0
-
     exec_log "pre-start hook" pre_start || return "$?"
 
 	exec_log "formats and mounts disk partition" \
