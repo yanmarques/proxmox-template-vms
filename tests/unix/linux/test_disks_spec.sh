@@ -4,33 +4,25 @@ Include ./tests/unix/linux/functions
 
 Describe "disks_counter()"
     It "1 scsi disk"
-        Mock fdisk
-            echo "Disk /dev/sda"
+        Mock lsblk
+            echo title
+            echo ""
         End
 
         When call disks_counter
         The output should eq "1"
     End
 
-    It "3 ide disks"
-        Mock fdisk
-            echo "Disk /dev/hda"
-            echo "Disk /dev/hdb"
-            echo "Disk /dev/hdc"
+    It "3 scsi disks"
+        Mock lsblk
+            echo title
+            echo ""
+            echo ""
+            echo ""
         End
 
         When call disks_counter
         The output should eq "3"
-    End
-
-    It "1 scsi disk and 1 ide disk"
-        Mock fdisk
-            echo "Disk /dev/sda"
-            echo "Disk /dev/hdc"
-        End
-
-        When call disks_counter
-        The output should eq "2"
     End
 End
 
