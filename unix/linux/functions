@@ -98,13 +98,10 @@ start_disk() {
 }
 
 deduce_linux_device() {
-	local uuids
-	uuids="$(blkid -o export | grep '^UUID' | awk -F= '{print $2}')"
-
-	for uuid in $uuids; do
+	for uuid in $(blkid -o export | grep '^UUID' | awk -F= '{print $2}'); do
 
 		# keep the ones which are not in fstab
-		if ! grep "$uuid" /etc/fstab; then
+		if ! grep "$uuid" /etc/fstab > /dev/null; then
 			blkid --uuid="$uuid"
 		fi
 	done
