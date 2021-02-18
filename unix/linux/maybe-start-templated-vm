@@ -4,9 +4,12 @@ set -e
 TEMPLATED_RUNTIME_LIB_DIR=/var/lib/proxmox-templated-vms
 
 # shellcheck source=/dev/null
-. "$TEMPLATED_RUNTIME_LIB_DIR"/{functions,console}
+. "$TEMPLATED_RUNTIME_LIB_DIR"/functions
+
+# shellcheck source=/dev/null
+. "$TEMPLATED_RUNTIME_LIB_DIR"/console
 
 # shellcheck source=/dev/null
 . "$TEMPLATED_RUNTIME_LIB_DIR"/linux/functions
 
-exec templated_exec "$@"
+templated_exec "$@"
