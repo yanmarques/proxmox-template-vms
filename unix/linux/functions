@@ -21,8 +21,8 @@ make_silent_ext4_fs() {
 
 format_disk_when_raw() {
 	local block_dev block_dev_partition
-	block_dev="$1"
-	block_dev_partition="$2"
+	block_dev="${1:?}"
+	block_dev_partition="${2:?}"
 
 	# allow all other arguments be passed to mkfs.ext4
 	shift
@@ -30,29 +30,26 @@ format_disk_when_raw() {
 
 	# is the block device already formatted?
 	# no, so format it and configure it's contents
-	if is_raw_disk "$block_dev"; then
-		if ! exec_log "format block device" \
-			format_linux_disk "$block_dev"; then
-
-			# shellcheck disable=SC2154
-			return "$format_disk_err"
-		fi
-
-		# create an ext4 file system on the created partition
-		if ! exec_log "create fs on partition" \
-			make_silent_ext4_fs "$@" "$block_dev_partition"; then
-
-			# shellcheck disable=SC2154
-			return "$file_system_err"
-		fi
+	if ! is_raw_disk "$block_dev"; then
+		return 0
 	fi
+
+	# shellcheck disable=SC2154
+	exec_log "format block device" format_linux_disk "$block_dev" || \
+		return "$format_disk_err"
+
+	# create an ext4 file system on the created partition
+	# shellcheck disable=SC2154
+	exec_log "create fs on partition" \
+		make_silent_ext4_fs "$@" "$block_dev_partition" || \
+		return "$file_system_err"
 }
 
 start_disk() {
 	local block_dev block_dev_partition format_opts mount_opts
 
 	# block device path
-	block_dev="$1"
+	block_dev="${1:?}"
 	shift
 	
 	# default path to disk partition
@@ -77,11 +74,8 @@ start_disk() {
 	done
 	
 	# shellcheck disable=2086
-	if ! format_disk_when_raw "$block_dev" \
-		"$block_dev_partition" ${format_opts}; then
-
-		return "$?"
-	fi
+	format_disk_when_raw "$block_dev" \
+		"$block_dev_partition" ${format_opts} || return
 
 	# ensure mountpoiunt exists then mount
 	# shellcheck disable=SC2154
@@ -89,12 +83,10 @@ start_disk() {
 
 	# mount device disk on rw directory
 	# shellcheck disable=2086
-	if ! exec_log "mount device" \
-		mount ${mount_opts} "$block_dev_partition" "$rw_dir"; then
-
-		# shellcheck disable=SC2154
+	# shellcheck disable=SC2154
+	exec_log "mount device" \
+		mount ${mount_opts} "$block_dev_partition" "$rw_dir" || \
 		return "$mount_err"
-	fi
 }
 
 uninstalled_partitions() {
@@ -109,7 +101,7 @@ uninstalled_partitions() {
 
 start_disk_from_partition() {
 	local device uuid ptuuid dev_part
-	uuid="$1"
+	uuid="${1:?}"
 
 	# ensure uuid is valid just getting the device path 
 	dev_part="$(blkid --uuid="$uuid")"
@@ -148,8 +140,8 @@ post_home_dir_populated() {
 mount_strategy() {
 	local src target args mnt_opts
 
-	src="$1"
-	target="$2"
+	src="${1:?}"
+	target="${2:?}"
 	args="$3"
 	mnt_opts=
 

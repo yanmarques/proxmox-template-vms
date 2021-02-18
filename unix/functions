@@ -81,10 +81,10 @@ setup_vm_user_data() {
 	# create user home directory
 	if [ ! -d "$(rw_base_home)" ]; then
 		exec_log "home directory initialization" \
-			populate_home_dir || return "$?"
+			populate_home_dir || return
 
 		exec_log "calling post-home-dir-populated hook" \
-			post_home_dir_populated || return "$?"
+			post_home_dir_populated || return
 	fi
 
 	# configuration files
@@ -108,8 +108,10 @@ EOF
 }
 
 is_directory_bind() {
-	local sufix_transform="/${1#/}"
-	local sufix_and_prefix="${sufix_transform%/}/"
+	local directory sufix_transform sufix_and_prefix
+	directory="${1:?}"
+	sufix_transform="/${directory#/}"
+	sufix_and_prefix="${sufix_transform%/}/"
 
 	grep -e "^$sufix_transform$" -e "^$sufix_and_prefix$" \
 		"$rw_dir"/config/bind-dirs.manifest > /dev/null 2>&1
@@ -127,13 +129,16 @@ is_directory_bind() {
 # mounted at /etc/wireguard/wg0.conf
 # 
 bind_files() {
-	for file in "$1"/*; do
+	local target
+	target="${1:?}"
+
+	for file in "$target"/*; do
 		# avoid an infinite loop
 		if [ -z "$file" ]; then
 			break
 		fi
 
-		local path="${1%/}/$file"
+		local path="${target%/}/$file"
 		local should_bind=true
 		
 		if [ -d "$path" ]; then
@@ -154,7 +159,8 @@ bind_files() {
 }
 
 local_bind_file_object() {
-	local path="$1"
+	local path target_file
+	path="${1:?}"
 
 	# try to find the real path
 	real_path="$(realpath "$path")"
@@ -166,7 +172,7 @@ local_bind_file_object() {
 	fi
 
 	# find the target path to file
-	local target_file="${real_path#$rw_dir/binds}"
+	target_file="${real_path#$rw_dir/binds}"
 
 	# ensure it is an absolute path to the filesystem
 	target_file="/${target_file#/}"
@@ -243,15 +249,6 @@ ensure_formated_and_mounted() {
 	start_disk "$disk" -B "$disk"1 "$@"
 }
 
-is_template_vm() {
-	if [ "$1" -lt 2 ]; then
-		info "seems like the template vm here, aborting..."
-		return 0
-	fi
-
-	return 1
-}
-
 info() {
 	echo "$(date) [INFO] $*"
 }
@@ -262,8 +259,8 @@ err() {
 
 exec_log() {
 	local exit_status title fn text
-	title="$1"
-	fn=$2
+	title="${1:?}"
+	fn=${2:?}
 	shift
 	shift
 
