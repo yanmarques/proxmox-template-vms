@@ -56,7 +56,7 @@ start_disk() {
 	shift
 	
 	# default path to disk partition
-	block_dev_partition="$block_dev"1
+	block_dev_partition="$block_dev"
 
 	while [[ "$1" == -* ]]; do
 		case "$1" in
@@ -97,14 +97,34 @@ start_disk() {
 	fi
 }
 
-deduce_linux_device() {
+uninstalled_partitions() {
 	for uuid in $(blkid -o export | grep '^UUID' | awk -F= '{print $2}'); do
 
 		# keep the ones which are not in fstab
 		if ! grep "$uuid" /etc/fstab > /dev/null; then
-			blkid --uuid="$uuid"
+			echo "$uuid"
 		fi
 	done
+}
+
+start_from_partition() {
+	local device uuid ptuuid dev_part
+	uuid="$1"
+
+	# ensure uuid is valid just getting the device path 
+	dev_part="$(blkid --uuid="$uuid")"
+	if [ "$?" -eq 2 ]; then
+		err "no such device: $uuid"
+		return 2
+	fi
+
+	# extract ptuuid from uuid
+	ptuuid="$(lsblk --output UUID,PTUUID | grep "^$uuid" | awk '{print $2}')"
+
+	# extract the first device path from ptuuid
+	device="$(lsblk --output PTUUID,PATH | grep -m 1 "^$ptuuid" | awk '{print $2}')"
+
+	start_disk "$device" -B "$dev_part" "$@"
 }
 
 ensure_formated_and_mounted() {
@@ -112,18 +132,16 @@ ensure_formated_and_mounted() {
 	linux_dev="${TEMPLATED_DEV}"
 
 	if [ -z "$linux_dev" ]; then
-		linux_dev="$(deduce_linux_device)"
-	fi
+		local uuid
+		uuid="$(uninstalled_partitions)"
 
-	# is it still empty
-	if [ -z "$linux_dev" ]; then
-		err "unable to find a valid device"
-		return "$format_disk_err"
-	fi
+		if [ "$(wc -l "$uuid")" -gt 1 ]; then
+			err "unable to deduce which partition to pick, too many recognized"
+			return "$format_disk_err"
+		fi
 
-	if [ "$(wc -l "$linux_dev")" -gt 1 ]; then
-		err "unable to deduce which device to pick, too many devices recognized"
-		return "$format_disk_err"
+		start_from_partition "$uuid"
+		return
 	fi
 
 	start_disk "$linux_dev" "$@"

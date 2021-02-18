@@ -184,3 +184,39 @@ Describe "mount_strategy()"
     End
 
 End
+
+Describe "start_from_partition()" current:test
+    It "find the device informations from uuid"
+        blkid() {
+            echo /dev/templated-test-1           
+        }
+
+        lsblk() {
+            if [ "--output UUID,PTUUID" == "$*" ]; then
+                echo "some-uuid some-ptuuid"
+            else
+                echo "some-ptuuid /dev/templated-test-0"
+            fi
+        }
+
+        start_disk() {
+            # shellcheck disable=SC2034
+            device="$1"
+
+            # ignore the '-B'
+            shift
+
+            # shellcheck disable=SC2034
+            partition="$2"
+
+            %preserve device partition
+
+            return 123
+        }
+
+        When call start_from_partition some-uuid
+        The status should eq 123
+        The variable device should eq /dev/templated-test-0
+        The variable partition should eq /dev/templated-test-1
+    End
+End
