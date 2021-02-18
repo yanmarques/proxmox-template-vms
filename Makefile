@@ -15,6 +15,7 @@ linux-uninstall: clean-bin
 install-lib:
 	@mkdir -p /var/lib/proxmox-templated-vms/linux
 	@install -m 644 unix/functions /var/lib/proxmox-templated-vms/
+	@install -m 644 unix/console /var/lib/proxmox-templated-vms/
 	@install -m 644 unix/linux/functions /var/lib/proxmox-templated-vms/linux/
 
 clean-bin:
