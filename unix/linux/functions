@@ -1,11 +1,5 @@
 #!/bin/bash
 
-#################################################
-# Environment vars
-#################################################
-
-linux_dev="${TEMPLATED_DEV:-/dev/sda}"
-
 disks_counter() {
 	fdisk -l | grep -c -E 'Disk /dev/(sd|hd)[a-z]{1}'
 }
@@ -103,7 +97,38 @@ start_disk() {
 	fi
 }
 
+deduce_linux_device() {
+	local uuids
+	uuids="$(blkid -o export | grep '^UUID' | awk -F= '{print $2}')"
+
+	for uuid in $uuids; do
+
+		# keep the ones which are not in fstab
+		if ! grep "$uuid" /etc/fstab; then
+			blkid --uuid="$uuid"
+		fi
+	done
+}
+
 ensure_formated_and_mounted() {
+	local linux_dev
+	linux_dev="${TEMPLATED_DEV}"
+
+	if [ -z "$linux_dev" ]; then
+		linux_dev="$(deduce_linux_device)"
+	fi
+
+	# is it still empty
+	if [ -z "$linux_dev" ]; then
+		err "unable to find a valid device"
+		return "$format_disk_err"
+	fi
+
+	if [ "$(wc -l "$linux_dev")" -gt 1 ]; then
+		err "unable to deduce which device to pick, too many devices recognized"
+		return "$format_disk_err"
+	fi
+
 	start_disk "$linux_dev" "$@"
 }
 
