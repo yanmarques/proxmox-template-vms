@@ -128,31 +128,13 @@ start_from_partition() {
 }
 
 detect_partition() {
-	local uuid
-	uuid="$(uninstalled_partitions)"
-
-	if [ "$(wc -l "$uuid")" -gt 1 ]; then
-		err "too many partitions recognized"
-		return 2
-	fi
-
-	echo "$uuid"
+	uninstalled_partitions
 }
 
 detect_raw_disk() {
-	local raw_disks
-	raw_disks=()
-
 	for disk in $(list_scsi_disks); do
-		is_raw_disk "$disk" && raw_disks+=( "$disk" )
+		is_raw_disk "$disk" && echo "$disk"
 	done
-
-	if [ "${raw_disks[#]}" -gt 1 ]; then
-		err "too many raw devices detected"
-		return 2
-	fi
-
-	echo "${raw_disks[*]}"
 }
 
 ensure_formated_and_mounted() {
@@ -164,13 +146,29 @@ ensure_formated_and_mounted() {
 		return
 	fi
 
-	local uuid disk
+	local uuid uuid_count disk disk_count
 	uuid="$(detect_partition)"
-	uuid_code="$?"
 	disk="$(detect_raw_disk)"
-	disk_code="$?"
 
-	if [ "$(( "$uuid_code" + "$disk_code" ))" -eq 4 ]; then
+	# nothing detected
+	if [ -z "$disk" ] && [ -z "$uuid" ]; then
+		err "any raw disk or partition available"
+		return "$format_disk_err"
+	fi
+
+	# count lines
+	uuid_count="$(wc -l <<< "${uuid}")"
+	disk_count="$(wc -l <<< "${disk}")"
+
+	local disk_valid uuid_valid
+	disk_valid=false
+	uuid_valid=false
+
+	# set whether valid
+	[ -n "$disk" ] && [ "$disk_count" -eq 1 ] && disk_valid=true
+	[ -n "$uuid" ] && [ "$uuid_count" -eq 1 ] && uuid_valid=true
+
+	if ! $disk_valid && ! $uuid_valid; then
 		err "can not proceed, unable to detect with precision which device to use"
 		info "ensure that only exists 1 formatted partition or 1 disk"
 		return "$format_disk_err"
@@ -179,7 +177,7 @@ ensure_formated_and_mounted() {
 	# takes precedence over the raw disk.
 	# this is a must, because one should be able to start a template-based 
 	# vm with just some raw disk and it ignores these raw disks
-	if [ "$uuid_code" -eq 0 ]; then
+	if $uuid_valid; then
 		start_from_partition "$uuid"
 		return
 	fi

@@ -153,7 +153,7 @@ Describe "mount_strategy()"
 
 End
 
-Describe "start_from_partition()" current:test
+Describe "start_from_partition()"
     It "find the device informations from uuid"
         blkid() {
             echo /dev/templated-test-1           
@@ -186,5 +186,159 @@ Describe "start_from_partition()" current:test
         The status should eq 123
         The variable device should eq /dev/templated-test-0
         The variable partition should eq /dev/templated-test-1
+    End
+End
+
+Describe "ensure_formated_and_mounted()"
+    unset TEMPLATED_DEV
+
+    start_from_partition() {
+        echo "$@"
+        return 11
+    }
+
+    start_disk() {
+        echo "$@"
+        return 22
+    }
+
+    detect_partition() {
+        :
+    }
+
+    detect_raw_disk() {
+        :
+    }
+
+    Context "fails when"
+        # sanity check
+        start_disk() {
+            :
+        }
+
+        It "more than 1 disk and partition"
+            detect_partition() {
+                echo 1
+                echo 2
+            }
+
+            detect_raw_disk() {
+                echo 3
+                echo 4
+            }
+
+            When call ensure_formated_and_mounted
+            The status should eq 5
+            The length of output should satisfy testit -gt 0
+            The length of stderr should satisfy testit -gt 0
+        End
+
+        It "any detected device"
+            When call ensure_formated_and_mounted
+            The status should eq 5
+            The stderr should include "any raw disk or partition available"
+        End
+
+        It "only detected more than 1 raw disks"
+            detect_raw_disk() {
+                echo 3
+                echo 4
+            }
+
+            When call ensure_formated_and_mounted
+            The status should eq 5
+            The length of output should satisfy testit -gt 0
+            The length of stderr should satisfy testit -gt 0
+        End
+
+        It "only detected more than 1 partitions"
+            detect_partition() {
+                echo 3
+                echo 4
+            }
+
+            When call ensure_formated_and_mounted
+            The status should eq 5
+            The length of output should satisfy testit -gt 0
+            The length of stderr should satisfy testit -gt 0
+        End
+    End
+
+    It "calls start_from_partition() with uuid"
+        detect_partition() {
+            echo some-uuid
+        }
+
+        When call ensure_formated_and_mounted
+        The status should eq 11
+        The output should eq "some-uuid"
+    End
+
+    It "calls start_disk() with raw device"
+        detect_raw_disk() {
+            echo test-device
+        }
+
+        When call ensure_formated_and_mounted
+        The status should eq 22
+        The output should eq "test-device -B test-device1"
+    End
+
+    It "call partition to format when raw disk also present"
+        detect_partition() {
+            echo some-uuid
+        }
+
+        detect_raw_disk() {
+            echo ignored-device
+        }
+
+        When call ensure_formated_and_mounted
+        The status should eq 11
+        The output should eq "some-uuid"
+    End
+
+    It "ignore many partitions when has raw disk"
+        detect_partition() {
+            echo ignored-part
+            echo ignored-part
+        }
+
+        detect_raw_disk() {
+            echo test-device
+        }
+
+        When call ensure_formated_and_mounted
+        The status should eq 22
+        The output should eq "test-device -B test-device1"
+    End
+
+    It "ignore many disks when has partition" current:test
+        detect_partition() {
+            echo test-partition
+        }
+
+        detect_raw_disk() {
+            echo ignored-device
+            echo ignored-device
+        }
+
+        When call ensure_formated_and_mounted
+        The status should eq 11
+        The output should eq "test-partition"
+    End
+
+    It "calls start_disk() from environment"
+        start_with_templated_dev() {
+            # shellcheck disable=SC2034
+            TEMPLATED_DEV=templated-test
+
+            ensure_formated_and_mounted
+        }
+
+        When call start_with_templated_dev
+        The status should eq 22             
+        The output should eq "templated-test"
+
     End
 End

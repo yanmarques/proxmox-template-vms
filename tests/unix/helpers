@@ -1,21 +1,19 @@
 #!/bin/sh
 
 # shellcheck shell=bash
-# shellcheck disable=SC2154
-
 
 not_empty() {
-    [ -n "$not_empty" ]
+    [ -n "${not_empty:?}" ]
 }
 
 mounted() {
-    df --output='target' | grep "^${mounted}$" 2> /dev/null
+    df --output='target' | grep "^${mounted:?}$" 2> /dev/null
 }
 
 has_default_rw_files() {
     local expected_dirs=('config' 'binds' 'home')
     local target
-    target="$rw_dir"
+    target="${rw_dir:?}"
 
     for directory in "${expected_dirs[@]}"; do
         test -d "$target/$directory" || err "missing dir: $directory"
@@ -30,8 +28,12 @@ has_default_rw_files() {
         err "wrong bind-dirs.manifest permission"
 }
 
+testit() {
+    test "${testit:?}" "$1" "$2"
+}
+
 is_disk() {
-    ! is_raw_disk "$is_disk"
+    ! is_raw_disk "${is_disk:?}"
 }
 
 same_contents() {
