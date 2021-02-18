@@ -1,7 +1,11 @@
 #!/bin/bash
 
 disks_counter() {
-	fdisk -l | grep -c -E 'Disk /dev/(sd|hd)[a-z]{1}'
+	list_scsi_disks | wc -l
+}
+
+list_scsi_disks() {
+	lsblk --output PATH --scsi | sed 1d
 }
 
 is_raw_disk() {
@@ -127,24 +131,65 @@ start_from_partition() {
 	start_disk "$device" -B "$dev_part" "$@"
 }
 
+detect_partition() {
+	local uuid
+	uuid="$(uninstalled_partitions)"
+
+	if [ "$(wc -l "$uuid")" -gt 1 ]; then
+		err "too many partitions recognized"
+		return 2
+	fi
+
+	echo "$uuid"
+}
+
+detect_raw_disk() {
+	local raw_disks
+	raw_disks=()
+
+	for disk in $(list_scsi_disks); do
+		is_raw_disk "$disk" && raw_disks+=( "$disk" )
+	done
+
+	if [ "${raw_disks[#]}" -gt 1 ]; then
+		err "too many raw devices detected"
+		return 2
+	fi
+
+	echo "${raw_disks[*]}"
+}
+
 ensure_formated_and_mounted() {
 	local linux_dev
 	linux_dev="${TEMPLATED_DEV}"
 
-	if [ -z "$linux_dev" ]; then
-		local uuid
-		uuid="$(uninstalled_partitions)"
-
-		if [ "$(wc -l "$uuid")" -gt 1 ]; then
-			err "unable to deduce which partition to pick, too many recognized"
-			return "$format_disk_err"
-		fi
-
-		start_from_partition "$uuid"
+	if [ -n "$linux_dev" ]; then
+		start_disk "$linux_dev" "$@"
 		return
 	fi
 
-	start_disk "$linux_dev" "$@"
+	local uuid disk
+	uuid="$(detect_partition)"
+	uuid_code="$?"
+	disk="$(detect_raw_disk)"
+	disk_code="$?"
+
+	if [ "$(( "$uuid_code" + "$disk_code" ))" -eq 4 ]; then
+		err "can not proceed, unable to detect with precision which device to use"
+		info "ensure that only exists 1 formatted partition or 1 disk"
+		return "$format_disk_err"
+	fi
+
+	# takes precedence over the raw disk.
+	# this is a must, because one should be able to start a template-based 
+	# vm with just some raw disk and it ignores these raw disks
+	if [ "$uuid_code" -eq 0 ]; then
+		start_from_partition "$uuid"
+		return
+	fi
+	
+	# disk is raw, will use the first partition
+	start_disk "$disk" -B "$disk"1
 }
 
 post_home_dir_populated() {
