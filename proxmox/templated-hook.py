@@ -33,6 +33,9 @@ logger = logging.getLogger(__file__)
 # global node
 node = os.getenv('TEMPLATED_NODE', 'pve')
 
+# default lvm storage name
+lvm_storage = os.getenv('TEMPLATED_LVM', 'local-lvm')
+
 # global disk uuid
 templated_disk_uuid = '3f484b83-c07a-4aad-b9b7-39c80cccab0c'
 
@@ -357,7 +360,7 @@ class Machine:
 
         # create a lv disk
         err = pvesh('create',
-                    'storage/local-lvm/content',
+                    f'storage/{lvm_storage}/content',
                     ' '.join(options),
                     call_impl=try_call)
 
@@ -434,6 +437,7 @@ class HostDeviceFormatter:
             logger.warn('logical volume [%s] already exists, removing...', 
                         self.filename)
 
+            # TODO use a reliable method to remove lv
             # disk already exists, remove it
             call(f'lvremove -y {self.device}')
 
