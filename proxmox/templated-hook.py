@@ -8,7 +8,6 @@ import logging
 import json
 import shlex
 import shutil
-import secrets
 import time
 import re
 import sys
@@ -343,20 +342,24 @@ def take_disk_snapshot(srcvm: Machine,
 
 
 def ensure_machine_has_config_data(vm: Machine):
+    disks = vm.list_disks()
+    if 'scsi30' in disks:
+        logger.debug('logical volume disk already attached to vm: %s', vm.name)
+        return
+
     if vm.lv_data_name is None:
-        name = f'vm-{vm.name}-data-{secrets.token_hex(6)}'
+        name = f'vm-{vm.name}-data'
 
         # create a minimal lv
-        call(f'lvcreate -n {name} -L 4M {node}')    
+        call(f'lvcreate -n {name} -L 4M {node}')
+
+        # create fs
+        call(f'mkfs.ext4 /dev/{node}/{name}')
 
         # save created lv name
         vm.lv_data_name = name
 
-    disks = vm.list_disks()
-    if 'scsi30' in disks:
-        logger.debug('logical volume disk already attached to vm: %s', vm.name)
-    else:
-        # attack scsi disk as cdrom media, so it goes read-only to guest vm
+     # attack scsi disk as cdrom media, so it goes read-only to guest vm
         vm.atach_disk('scsi30', 
                       vm.lv_data_name, 
                       options='media=cdrom', 
