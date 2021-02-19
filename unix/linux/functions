@@ -128,6 +128,13 @@ start_disk_from_partition() {
 	start_disk "$device" -B "$dev_part" "$@"
 }
 
+find_device_by_uuid() {
+	local uuid
+	uuid="${1:?}"
+
+	lsblk --output UUID,PATH | grep "^$uuid" | awk '{print $2}'
+}
+
 detect_partition() {
 	uninstalled_partitions
 }

@@ -28,8 +28,12 @@ default_binary=${base_home_dir%/}
 runtime_dir=${TEMPLATED_RUNTIME_DIR:-/var/run/proxmox-templated-vms}
 runtime_dir=${runtime_dir%/}
 
-# default disk used to receive host information
-default_host_cdrom=${TEMPLATED_HOST_CDROM:-/dev/sr0}
+#################################################
+# Global vars
+#################################################
+
+# host disk uuid
+templated_disk_uuid="3f484b83-c07a-4aad-b9b7-39c80cccab0c"
 
 
 #################################################
@@ -257,15 +261,18 @@ ensure_formated_and_mounted() {
 }
 
 receive_host_data() {
-	if [ ! -b "$default_host_cdrom" ]; then
+	local device
+	device="$(find_device_by_uuid "$templated_disk_uuid")"
+
+	if [ -z "$device" ]; then
 		err "failed to receive host data, missing cdrom disk"
 		return 1
-	fi 
+	fi
 
 	# ensure mountpoint exists
 	mkdir -p "$runtime_dir"
 
-	exec_log "mount host disk" mount -o ro "$default_host_cdrom" "$runtime_dir" || \
+	exec_log "mount host disk" mount "$device" "$runtime_dir" || \
 		return "$mount_err"
 }
 
