@@ -148,6 +148,7 @@ class CommonCfg:
 class ConfigIOInterface:
     def __init__(self, path, load=False):
         self._cfg_handler = CommonCfg(path)
+        self._stats = None
         if load:
             self.reload()
 
