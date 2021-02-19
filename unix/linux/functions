@@ -4,10 +4,15 @@ list_scsi_disks() {
 	lsblk --output PATH --scsi | sed 1d
 }
 
+list_part_uuids() {
+	lsblk --output TYPE,UUID --exclude 252 | \
+		grep '^part[[:space:]]' | awk '{print $2}'
+}
+
 list_all_disks() {
 	# --exclude 252 (SWAP)
 	lsblk --output TYPE,PATH --exclude 252 | \
-		grep '^disk' | awk '{print $2}'
+		grep '^disk[[:space:]]' | awk '{print $2}'
 }
 
 is_raw_disk() {
@@ -99,12 +104,11 @@ start_disk() {
 }
 
 uninstalled_partitions() {
-	for uuid in $(blkid -o export | grep '^UUID' | awk -F= '{print $2}'); do
+	# shellcheck disable=SC2154
+	for uuid in $(list_part_uuids | grep -v "$templated_disk_uuid"); do
 
 		# keep the ones which are not in fstab
-		if ! grep "$uuid" /etc/fstab > /dev/null; then
-			echo "$uuid"
-		fi
+		! grep "$uuid" /etc/fstab > /dev/null && echo "$uuid"
 	done
 }
 
