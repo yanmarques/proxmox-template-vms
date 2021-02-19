@@ -444,6 +444,9 @@ class MachineHandler:
         if self.memory.seen(self.vm.vmid):
             return 0
 
+        # make it available
+        self.formatter.format()
+
         if self.vm.is_template_vm:
             self._setup_template_vm()
         else:
