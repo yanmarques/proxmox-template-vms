@@ -435,7 +435,7 @@ class HostDeviceFormatter:
                         self.filename)
 
             # disk already exists, remove it
-            self.vm.remove_by_lv_name(self.filename)
+            call(f'lvremove -y {self.device}')
 
             # try to recreate the disk
             assert self.vm.create_disk(self.filename, 
