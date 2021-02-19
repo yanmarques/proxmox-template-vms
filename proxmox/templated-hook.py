@@ -334,11 +334,40 @@ class Machine:
         # get the logical volume so we can compare it
         disk_lv = parse_disk_lv(disk_value)
 
+        # actually remove logical volume
+        return self.remove_by_lv_name(disk_lv)
+
+    def remove_by_lv_name(self, lv_name):
+        '''
+        Removes the device from logical volume name 
+        '''
+
         config = self.fetch_config()
         for device, v in config.items():
-            if disk_lv in str(v):
+            if lv_name in str(v):
                 pvesh('set', f'qemu/{self.vmid}/config', f'-delete {device}')
                 return True
+
+    def create_disk(self, filename, size):
+        options = [
+            f'--filename={filename}',
+            f'--vmid={self.vmid}',
+            f'--size={size}',
+        ]
+
+        # create a lv disk
+        err = pvesh('create',
+                    'storage/local-lvm/content',
+                    ' '.join(options),
+                    call_impl=try_call)
+
+        # handle error
+        if err is not None:
+            # device already exists
+            if err.returncode == 5:
+                return False
+
+            raise err
 
     def start(self, options=None):
         pvesh('create', f'qemu/{self.vmid}/status/start', options=options)
@@ -399,23 +428,17 @@ class HostDeviceFormatter:
         return f'/dev/{node}/{self.filename}'
 
     def format(self):
-        options = [
-            f'--filename={self.filename}',
-            f'--vmid={self.vm.vmid}',
-            f'--size={self.disk_size}',
-        ]
+        result = self.vm.create_disk(self.filename, self.disk_size)
 
-        # create a lv disk
-        err = pvesh('create',
-                    'storage/local-lvm/content',
-                    ' '.join(options),
-                    call_impl=try_call)
-        
-        if err is not None:
-            if err.returncode == 5:
-                logger.warn('host device logical volume already exists')
-            raise ValueError('failed to create logical volume')
+        if result is False:
+            # disk already exists, remove it
+            self.vm.remove_by_lv_name(self.filename)
 
+            # try to recreate the disk
+            assert self.vm.create_disk(self.filename, 
+                                       self.disk_size) is not False, \
+                        'failed to create logical volume'
+            
         # create fs
         call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
 
