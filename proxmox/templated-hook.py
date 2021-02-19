@@ -293,7 +293,7 @@ class Machine:
         disk_lv = parse_disk_lv(disk)
         return bus_dev, disk_lv
 
-    def atach_disk(self, bus_device, lv_name, options='', add_to_boot=True):
+    def attach_disk(self, bus_device, lv_name, options='', add_to_boot=True):
         self._hard_unlock_server()
 
         value = f'-{bus_device} local-lvm:{lv_name},{options}'
@@ -533,7 +533,7 @@ class MachineHandler:
         lv_name = self.formatter.filename
 
         # attach host disk
-        self.vm.atach_disk(info['bus_dev'], lv_name, add_to_boot=False)
+        self.vm.attach_disk(info['bus_dev'], lv_name, add_to_boot=False)
 
         # remember the cloned bus/device 
         self.memory.put(self.vm.vmid, info['bus_dev'])
@@ -552,7 +552,8 @@ class MachineHandler:
                                             info['index'])
         
         # attach new disk
-        self.vm.atach_disk(info['bus_dev'], thin_pool_clone)
+        self.vm.attach_disk(info['bus_dev'], thin_pool_clone)
+        logger.info('attached disk: [%s]', info['bus_dev'])
 
         # get the name of logical volume
         lv_name = self.formatter.filename
@@ -561,7 +562,8 @@ class MachineHandler:
         lv_bus_dev = f'{info["bus"]}{info["index"] + 1}'
 
         # attach host disk
-        self.vm.atach_disk(lv_bus_dev, lv_name, add_to_boot=False)
+        self.vm.attach_disk(lv_bus_dev, lv_name, add_to_boot=False)
+        logger.info('attached disk: [%s]', lv_bus_dev)
 
         # remember the cloned bus/device 
         self.memory.put(self.vm.vmid, ','.join([info['bus_dev'], lv_bus_dev]))
