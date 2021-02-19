@@ -439,7 +439,7 @@ class MachineHandler:
             return 0
 
         # handles formatting the host disk
-        seeder = HostDeviceSeeder(self)
+        seeder = HostDeviceSeeder(self.vm)
         seeder.format()
 
         if self.vm.is_template_vm:
