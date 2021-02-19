@@ -217,7 +217,7 @@ Describe "ensure_formated_and_mounted()"
     End
 End
 
-Describe "receive_host_data()" current
+Describe "receive_host_data()"
     It "calls mount with default host cdrom as read-only"
         mount() {
             # shellcheck disable=SC2034
@@ -243,5 +243,84 @@ Describe "receive_host_data()" current
 
         # shellcheck disable=SC2154
         The variable args should eq "-o ro $cdrom $runtime_dir" 
+    End
+End
+
+Describe "bind_files()" current
+    create_dirs() {
+        echo "creating directoriess"
+        load_runtime_vars
+
+        # create a fake home
+        mkdir -p "$(rw_base_home)"
+        setup_vm_user_data
+    }
+
+    Before create_dirs
+
+    It "calls mount with the correct target file"
+        mount_strategy() {
+            echo "$2"
+        }
+
+        call_bind_files() {
+            # shellcheck disable=SC2154
+            mkdir -p "$binds_dir"/foo/bar
+            touch "$binds_dir"/foo/bar/baz
+
+            bind_files "$binds_dir"
+        }
+
+        When call call_bind_files
+        The status should be success
+        The output should start with /foo/bar/baz
+    End
+
+    It "calls mount with directory when is a bind dir"
+        mount_strategy() {
+            echo "$2"
+        }
+
+        call_bind_files() {
+            expected_dir="$binds_dir"/foo/bar
+            mkdir -p "$expected_dir"
+
+            # register as bind dir
+            # shellcheck disable=SC2154
+            echo "$expected_dir" >> "$binds_config"
+
+            bind_files "$binds_dir"
+        }
+
+        When call call_bind_files
+        The status should be success
+        The output should start with /foo/bar
+    End
+
+    It "backup old content"
+        mount_strategy() {
+            return 0
+        }
+
+        call_bind_files() {
+            register_tmp_dir
+            relative_path="$(last_tmp_dir)"/foo/bar
+            %preserve relative_path
+
+            expected_dir="$binds_dir""$relative_path"
+
+            mkdir -p "$expected_dir"
+            touch "$expected_dir"/foo
+            echo "baz" > "$relative_path"/foo
+
+            bind_files "$binds_dir"
+        }
+
+        backup_foo_file() {
+            [ "$(cat "$relative_path"/foo.old)" == "baz" ]
+        }
+
+        When call call_bind_files
+        Assert backup_foo_file
     End
 End

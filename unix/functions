@@ -37,6 +37,20 @@ templated_disk_uuid="3f484b83-c07a-4aad-b9b7-39c80cccab0c"
 
 
 #################################################
+# Runtime vars
+#################################################
+
+load_runtime_vars() {
+	config_dir="$rw_dir"/config
+	binds_dir="$rw_dir"/binds
+	rc_config="$config_dir"/rc.local
+	binds_config="$config_dir"/bind-dirs.conf
+}
+
+load_runtime_vars
+
+
+#################################################
 # Error codes
 #################################################
 
@@ -100,21 +114,21 @@ setup_vm_user_data() {
 
 	# configuration files
 	# gives user full control over the installation
-	mkdir -p "$rw_dir"/config/
-	mkdir -p "$rw_dir"/binds/
+	mkdir -p "$config_dir"
+	mkdir -p "$binds_dir"
 
-	if [ ! -f "$rw_dir"/config/rc.local ]; then
-		cat <<EOF > "$rw_dir"/config/rc.local
+	if [ ! -f "$rc_config" ]; then
+		cat <<EOF > "$rc_config"
 #!$default_binary
 # Put commands to execute with systemd service.
 # Eg.: systemctl start openvpn-client
 EOF
-		chmod 755 "$rw_dir"/config/rc.local
+		chmod 755 "$rc_config"
 	fi
 
-	if [ ! -f "$rw_dir"/config/bind-dirs.manifest ]; then
-		touch "$rw_dir"/config/bind-dirs.manifest
-		chmod 644 "$rw_dir"/config/bind-dirs.manifest
+	if [ ! -f "$binds_config" ]; then
+		touch "$binds_config"
+		chmod 644 "$binds_config"
 	fi
 }
 
@@ -125,7 +139,7 @@ is_directory_bind() {
 	sufix_and_prefix="${sufix_transform%/}/"
 
 	grep -e "^$sufix_transform$" -e "^$sufix_and_prefix$" \
-		"$rw_dir"/config/bind-dirs.manifest > /dev/null 2>&1
+		"$binds_config" > /dev/null 2>&1
 }
 
 # given a root directory, mount every file to the root filesystem
@@ -143,29 +157,24 @@ bind_files() {
 	local target
 	target="${1:?}"
 
-	for file in "$target"/*; do
+	for path in "$target"/*; do
 		# avoid an infinite loop
-		if [ -z "$file" ]; then
+		if [ -z "$path" ]; then
 			break
 		fi
 
-		local path="${target%/}/$file"
-		local should_bind=true
-		
 		if [ -d "$path" ]; then
-			local fake_path="${path#${rw_dir}/binds}"
+			local fake_path="${path#${binds_dir}}"
 			
 			if ! is_directory_bind "$fake_path"; then
-				# will ignore this current file		
-				should_bind=false
-
 				# recursive function call when path is a directory
 				# and is not registered as a bind
 		    	bind_files "$path"
+				continue
 			fi
 		fi
 
-		$should_bind && local_bind_file_object "$path"
+		local_bind_file_object "$path"
 	done
 }
 
@@ -183,7 +192,7 @@ local_bind_file_object() {
 	fi
 
 	# find the target path to file
-	target_file="${real_path#$rw_dir/binds}"
+	target_file="${real_path#${binds_dir}}"
 
 	# ensure it is an absolute path to the filesystem
 	target_file="/${target_file#/}"
@@ -207,8 +216,8 @@ mount_user_home_dir() {
 
 # execute this at startup
 start_user_custom_config() {
-	exec_log "binding user files" bind_files "$rw_dir"/binds
-	exec_log "calling user rc script" "$rw_dir"/config/rc.local
+	exec_log "binding user files" bind_files "$binds_dir"
+	exec_log "calling user rc script" "$rc_config"
 }
 
 ensure_formated_and_mounted() {
