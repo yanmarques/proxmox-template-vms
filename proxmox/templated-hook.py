@@ -451,7 +451,7 @@ class MachineHandler:
 
         # make setup calls
         if self.vm.is_template_vm:
-            setup = self._seed_template_vm
+            setup = self._setup_template_vm
         elif self.vm.template_vmid is not None:
             setup = self._setup_template_based_vm
         else:
