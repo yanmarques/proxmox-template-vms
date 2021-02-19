@@ -48,7 +48,6 @@ def try_call(*args, **kwargs):
     try:
         call(*args, **kwargs)
     except subprocess.CalledProcessError as err:
-        logger.error(str(err), err)
         return err
 
 
