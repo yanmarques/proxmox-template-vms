@@ -391,7 +391,7 @@ def configure_vm_and_jump(vm, memory):
     lv_bus_dev = f'{bus}{vm_disk_dev + 1}'
 
     # attach host disk
-    vm.atach_disk(lv_bus_dev, lv_name)
+    vm.atach_disk(lv_bus_dev, lv_name, add_to_boot=False)
 
     # remember the cloned bus/device 
     memory.put(vm.vmid, ','.join([cloned_bus_dev, lv_bus_dev]))
