@@ -368,16 +368,16 @@ class HostDeviceFormatter:
         self.disk_size = disk_size
 
     @property
-    def name(self):
+    def filename(self):
         return f'vm-{self.vm.vmid}-host-data'
 
     @property
     def device(self):
-        return f'/dev/{node}/{self.name}'
+        return f'/dev/{node}/{self.filename}'
 
     def format(self):
         options = [
-            f'--filename={self.name}',
+            f'--filename={self.filename}',
             f'--vmid={self.vm.vmid}',
             f'--size={self.disk_size}',
         ]
@@ -391,16 +391,16 @@ class HostDeviceFormatter:
         call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
 
 
-class HostDeviceSeeder(HostDeviceFormatter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._seeders = [self._seed_common_guest_files]
+class HostDeviceSeeder:
+    def __init__(self, vm: Machine):
+        self.vm = vm
+        self._reset_seeders()
 
-    def seed(self):
+    def seed(self, device):
         tmp_dir = tempfile.mkdtemp()
 
         try:
-            call(f'mount {self.device} {tmp_dir}')
+            call(f'mount {device} {tmp_dir}')
             self._call_seeders(tmp_dir)
         finally:
             call(f'umount {tmp_dir}')
@@ -417,15 +417,21 @@ class HostDeviceSeeder(HostDeviceFormatter):
         with open(hostname, 'w') as wr:
             wr.write(self.vm.name)
 
+    def _reset_seeders(self):
+        self._seeders = [self._seed_common_guest_files]
+
     def _call_seeders(self, target_dir):
         for seeder in self._seeders:
             seeder(target_dir)
+        self._reset_seeders()
 
 
 class MachineHandler:
     def __init__(self, vmid):
         self.vm = Machine(vmid)
         self.memory = MemoryStats()
+        self.seeder = HostDeviceSeeder(self.vm)
+        self.formatter = HostDeviceFormatter(self.vm)
 
     def registered_events(self):
         return {
@@ -438,17 +444,13 @@ class MachineHandler:
         if self.memory.seen(self.vm.vmid):
             return 0
 
-        # handles formatting the host disk
-        seeder = HostDeviceSeeder(self.vm)
-        seeder.format()
-
         if self.vm.is_template_vm:
-            self._setup_template_vm(seeder)
+            self._setup_template_vm()
         else:
-            self._setup_template_based_vm(seeder)
+            self._setup_template_based_vm()
 
         # create files inside host disk
-        seeder.seed()
+        self.seeder.seed(self.formatter.device)
 
         # start the vm without caring about lock file
         self.vm.start('-skiplock')
@@ -476,14 +478,14 @@ class MachineHandler:
         template_vm = os.path.join(target_dir, 'template-vm')
         with open(template_vm, 'w') as _: pass
 
-    def _setup_template_vm(self, seeder: HostDeviceSeeder):
-        seeder.add(self._seed_template_vm)
+    def _setup_template_vm(self):
+        self.seeder.add(self._seed_template_vm)
 
         # obtain many disk informations
         info = disk_info(self.vm)
 
         # get the name of logical volume
-        lv_name = seeder.name
+        lv_name = self.formatter.filename
 
         # attach host disk
         self.vm.atach_disk(info['bus_dev'], lv_name, add_to_boot=False)
@@ -491,7 +493,7 @@ class MachineHandler:
         # remember the cloned bus/device 
         self.memory.put(self.vm.vmid, info['bus_dev'])
 
-    def _setup_template_based_vm(self, seeder: HostDeviceSeeder):
+    def _setup_template_based_vm(self):
         # create template vm and get root hard disk informations
         template_vm = Machine(self.vm.template_vmid, parse_config=False)
 
@@ -508,7 +510,7 @@ class MachineHandler:
         self.vm.atach_disk(info['bus_dev'], thin_pool_clone)
 
         # get the name of logical volume
-        lv_name = seeder.name
+        lv_name = self.formatter.filename
 
         # next bus device in the chain
         lv_bus_dev = f'{info["bus"]}{info["index"] + 1}'
