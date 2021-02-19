@@ -213,6 +213,14 @@ class Machine:
         return self._cfg.get('template_vmid')
 
     @property
+    def is_template_vm(self):
+        '''
+        Returns whether the machine is a template
+        '''
+
+        return self._cfg.get('is_template_vm') == '1'
+
+    @property
     def name(self):
         '''Get virtual machine name'''
 
@@ -331,133 +339,227 @@ def take_disk_snapshot(srcvm: Machine,
         call(f'lvchange -a y -K {node}/{snap}')
     return snap
 
-def populate_host_files(directory):
-    with open(os.path.join(directory, 'someshit'), 'w') as w:
-        pass
 
-
-def prepare_templated_host_device(vm: Machine):
-    name = f'vm-{vm.vmid}-host-data'
-    device = f'/dev/{node}/{name}'
-
-    # create a minimal lv
-    pvesh('create',
-            '/storage/local-lvm/content',
-            f'--filename={name} --vmid={vm.vmid} --size=4M')
-
-    # create fs
-    call(f'mkfs.ext4 -U {templated_disk_uuid} {device}')
-
-    tmp_dir = tempfile.mkdtemp()
-
-    try:
-        call(f'mount {device} {tmp_dir}')
-        populate_host_files(tmp_dir)
-        call(f'umount {tmp_dir}')
-    finally:
-        # remove temporary directory
-        shutil.rmtree(tmp_dir)
-
-    return name
-
-
-def configure_vm_and_jump(vm, memory):
-    # create template vm and get root hard disk informations
-    template_vm = Machine(vm.template_vmid, parse_config=False)
+def disk_info(template_vm: Machine, vm: Machine=None):
+    vm = vm or template_vm
 
     # get template root's bus/device and logical volume name
     tplt_bus_device, root_lv = template_vm.get_root_disk()
 
     # calculate a free device to attach
-    vm_disk_dev = len(vm.list_disks(filter_by_bus=tplt_bus_device))
-
-    # take snapshot of template root disk
-    thin_pool_clone = take_disk_snapshot(template_vm,
-                                         vm,
-                                         root_lv, 
-                                         vm_disk_dev)
+    disk_index = len(vm.list_disks(filter_by_bus=tplt_bus_device))
 
     # we need a way to detect the bus from template's root disk
     # and we know it is composed by a bus name and a device number
     # what we do? remove every digit from name
     bus = ''.join(l for l in tplt_bus_device if not l.isdigit())
-    cloned_bus_dev = f'{bus}{vm_disk_dev}' 
 
-    # attach new disk
-    vm.atach_disk(cloned_bus_dev, thin_pool_clone)
-
-    # prepare host device
-    lv_name = prepare_templated_host_device(vm)
-    lv_bus_dev = f'{bus}{vm_disk_dev + 1}'
-
-    # attach host disk
-    vm.atach_disk(lv_bus_dev, lv_name, add_to_boot=False)
-
-    # remember the cloned bus/device 
-    memory.put(vm.vmid, ','.join([cloned_bus_dev, lv_bus_dev]))
-
-    # start the vm without caring about lock file
-    vm.start('-skiplock')
-
-    # the original call to start the vm has to fail so the later 
-    # call to start be the only one which actually triggers 
-    # the start procedure
-    return 1
+    return {
+        'bus': bus,
+        'index': disk_index,
+        'root_lv': root_lv,
+        'bus_dev': f'{bus}{disk_index}'
+    }
 
 
-def on_pre_start(vm: Machine, memory: MemoryStats):
-    # already seen
-    if memory.seen(vm.vmid):
-        return 0
+class HostDeviceFormatter:
+    def __init__(self, vm: Machine, disk_size: str = '4M'):
+        self.vm = vm
+        self.disk_size = disk_size
 
-    return configure_vm_and_jump(vm, memory)
+    @property
+    def name(self):
+        return f'vm-{self.vm.vmid}-host-data'
+
+    @property
+    def device(self):
+        return f'/dev/{node}/{self.name}'
+
+    def format(self):
+        options = [
+            f'--filename={self.name}',
+            f'--vmid={self.vm.vmid}',
+            f'--size={self.disk_size}',
+        ]
+
+        # create a lv disk
+        pvesh('create',
+                '/storage/local-lvm/content',
+                ' '.join(options))
+
+        # create fs
+        call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
 
 
-def remove_old_configuration(vm: Machine, memory: MemoryStats):
-    assert memory.seen(vm.vmid), 'VM id has not registered to remove old configuration'
+class HostDeviceSeeder(HostDeviceFormatter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._seeders = [self._seed_common_guest_files]
 
-    # in memory we may find the last bus/device
-    bus_devices = memory.last(vm.vmid)
+    def seed(self):
+        tmp_dir = tempfile.mkdtemp()
 
-    for bus_dev in bus_devices.split(','):
-        # so detach which also removes it from boot
-        vm.detach_disk(bus_dev)
+        try:
+            call(f'mount {self.device} {tmp_dir}')
+            self._call_seeders(tmp_dir)
+        finally:
+            call(f'umount {tmp_dir}')
+
+            # remove temporary directory
+            shutil.rmtree(tmp_dir)
+    
+    def add(self, seeder):
+        self._seeders.append(seeder)
+
+    def _seed_common_guest_files(self, target_dir):
+        # set hostname file as machine name
+        hostname = os.path.join(target_dir, 'hostname')
+        with open(hostname, 'w') as wr:
+            wr.write(self.vm.name)
+
+    def _call_seeders(self, target_dir):
+        for seeder in self._seeders:
+            seeder(target_dir)
+
+
+class MachineHandler:
+    def __init__(self, vmid):
+        self.vm = Machine(vmid)
+        self.memory = MemoryStats()
+
+    def registered_events(self):
+        return {
+            'pre-start': self.on_pre_start,
+            'post-stop': self.on_post_stop, 
+        }
+
+    def on_pre_start(self):
+        # already seen
+        if self.memory.seen(self.vm.vmid):
+            return 0
+
+        # handles formatting the host disk
+        seeder = HostDeviceSeeder(self)
+        seeder.format()
+
+        if self.vm.is_template_vm:
+            self._setup_template_vm(seeder)
+        else:
+            self._setup_template_based_vm(seeder)
+
+        # create files inside host disk
+        seeder.seed()
+
+        # start the vm without caring about lock file
+        self.vm.start('-skiplock')
+
+        # the original call to start the vm has to fail so the later 
+        # call to start be the only one which actually triggers 
+        # the start procedure
+        return 1
+
+    def on_post_stop(self):
+        assert self.memory.seen(self.vm.vmid), 'VM id has not registered to remove old configuration'
+
+        # in memory we may find the last bus/device
+        bus_devices = self.memory.last(self.vm.vmid)
+
+        for bus_dev in bus_devices.split(','):
+            # so detach which also removes it from boot
+            self.vm.detach_disk(bus_dev)
 
         # forget about vm
-        memory.delete(vm.vmid)
+        self.memory.delete(self.vm.vmid)
+
+    def _seed_template_vm(self, target_dir):
+        # create template-vm file indicating this is a template vm
+        template_vm = os.path.join(target_dir, 'template-vm')
+        with open(template_vm, 'w') as _: pass
+
+    def _setup_template_vm(self, seeder: HostDeviceSeeder):
+        seeder.add(self._seed_template_vm)
+
+        # obtain many disk informations
+        info = disk_info(self.vm)
+
+        # get the name of logical volume
+        lv_name = seeder.name
+
+        # attach host disk
+        self.vm.atach_disk(info['bus_dev'], lv_name, add_to_boot=False)
+
+        # remember the cloned bus/device 
+        self.memory.put(self.vm.vmid, info['bus_dev'])
+
+    def _setup_template_based_vm(self, seeder: HostDeviceSeeder):
+        # create template vm and get root hard disk informations
+        template_vm = Machine(self.vm.template_vmid, parse_config=False)
+
+        # obtain many disk informations
+        info = disk_info(template_vm, self.vm)
+
+        # take snapshot of template root disk
+        thin_pool_clone = take_disk_snapshot(template_vm,
+                                            self.vm,
+                                            info['root_lv'], 
+                                            info['index'])
+        
+        # attach new disk
+        self.vm.atach_disk(info['bus_dev'], thin_pool_clone)
+
+        # get the name of logical volume
+        lv_name = seeder.name
+
+        # next bus device in the chain
+        lv_bus_dev = f'{info["bus"]}{info["index"] + 1}'
+
+        # attach host disk
+        self.vm.atach_disk(lv_bus_dev, lv_name, add_to_boot=False)
+
+        # remember the cloned bus/device 
+        self.memory.put(self.vm.vmid, ','.join([info['bus_dev'], lv_bus_dev]))
+
+    def __str__(self):
+        return f'{self.__class__.__name__} [VMID={self.vm.vmid}]'
+
+    
+class MachineEventDispatcher:
+    handler_factory = MachineHandler
+
+    def __init__(self, *args, **kwargs):
+        self._handler = self.handler_factory(*args, **kwargs)
+
+    def dispatch(self, event):
+        events = self._handler.registered_events()
+        event_handler = events.get(event)
+
+        if event_handler is None:
+            logger.error('received a not registered event [%s] on handler [%s]', 
+                         event, 
+                         self._handler)
+            return
+
+        logger.info('received event [%s] for handler [%s]', event, self._handler)
+        
+        try:
+            return event_handler() or 0
+        except Exception as exc:
+            logger.exception(str(exc))
+            return 1
 
 
 def main():
     if len(sys.argv) != 3:
-        print(f'Usage: {sys.argv[0]} vmid phase')
+        print(f'Usage: {sys.argv[0]} vmid event')
         return 128
 
     vmid = sys.argv[1].strip()
-    phase = sys.argv[2].strip()
-
-    available_phases = {
-        'pre-start': on_pre_start,
-        'post-stop': remove_old_configuration, 
-    }
+    event = sys.argv[2].strip()
 
     setup_logging('/var/log/templated.log')
 
-    logger.info('received hook from user: %s', getpass.getuser())
-
-    handler = available_phases.get(phase)
-    if handler is None:
-        logger.error('unknow phase [%s] with vmid [%s]', phase, vmid)
-    else:
-        logger.info('received vmid [%s] with phase [%s]', vmid, phase)
-        vm = Machine(vmid)
-        memory = MemoryStats()
-
-        try:
-            return handler(vm, memory) or 0
-        except Exception as exc:
-            logger.exception(str(exc))
-
-    return 0
+    dispatcher = MachineEventDispatcher(vmid)
+    return dispatcher.dispatch(event)
 
 
 if __name__ == "__main__":

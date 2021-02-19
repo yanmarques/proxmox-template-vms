@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # environment vars
@@ -22,11 +22,12 @@ main() {
 
 	# runtime vars
 	local vm_config="$hooks_storage/config/$vmid.conf"
+	local template_vm_config="$hooks_storage/config/$template_vmid.conf"
 
 	if [ -f "$vm_config" ]; then
 		echo "[+] an existing configuration exists at: $vm_config"
 		echo "[?] replace existing configuration? [N/y]"
-		read choice
+		read -r choice
 		case "$choice" in
 			n|N)
 				exit 2
@@ -37,8 +38,14 @@ main() {
 	echo "[+] writing custom configuration"
 	echo "template_vmid: $template_vmid" > "$vm_config"
 
+	if [ ! -f "$template_vm_config" ]; then
+		echo "[+] marking as template vm: $template_vmid"
+		echo "is_template_vm: 1" > "$template_vm_config"
+	fi
+
 	echo "[+] writing vm hookscript"
 	pvesh set "/nodes/$node/qemu/$vmid/config" -hookscript "$storage:snippets/$hook_name" > /dev/null
+	pvesh set "/nodes/$node/qemu/$template_vmid/config" -hookscript "$storage:snippets/$hook_name" > /dev/null
 
 	echo "[+] done"
 }
