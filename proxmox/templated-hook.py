@@ -389,8 +389,8 @@ class HostDeviceFormatter:
 
         # create a lv disk
         pvesh('create',
-                '/storage/local-lvm/content',
-                ' '.join(options))
+              'storage/local-lvm/content',
+              ' '.join(options))
 
         # create fs
         call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
