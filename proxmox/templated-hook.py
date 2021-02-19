@@ -37,15 +37,30 @@ node = os.getenv('TEMPLATED_NODE', 'pve')
 templated_disk_uuid = '3f484b83-c07a-4aad-b9b7-39c80cccab0c'
 
 
-def call(command):
+def call(command, only_code_stat=False):
     '''Executes given command as a subprocess and returns it's output.'''
 
     args = shlex.split(command)
     return subprocess.check_output(args, stderr=subprocess.PIPE)
 
 
-def pvesh(method, path, options=None, parse_out=None):
+def try_call(*args, **kwargs):
+    try:
+        call(*args, **kwargs)
+    except subprocess.CalledProcessError as err:
+        logger.error(str(err), err)
+        return err
+
+
+def pvesh(method, 
+          path, 
+          options=None, 
+          parse_out=None,
+          call_impl=None):
     '''Wrapper to call pvesh utility.'''
+
+    # deduce the caller function
+    _caller = call_impl or call
 
     has_out_methods = [
         'get',
@@ -57,9 +72,13 @@ def pvesh(method, path, options=None, parse_out=None):
         parse_out = True
 
     command = f'pvesh {method} /nodes/{node}/{path} --output-format json {options or ""}'
-    output = call(command)
+    result = _caller(command)
+    
+    if call_impl is not None:
+        return result
+
     if parse_out:
-        return json.loads(output.strip())
+        return json.loads(result.strip())
 
 
 def path_name_of(path):
@@ -388,9 +407,15 @@ class HostDeviceFormatter:
         ]
 
         # create a lv disk
-        pvesh('create',
-              'storage/local-lvm/content',
-              ' '.join(options))
+        err = pvesh('create',
+                    'storage/local-lvm/content',
+                    ' '.join(options),
+                    call_impl=try_call)
+        
+        if err is not None:
+            if err.returncode == 5:
+                logger.warn('host device logical volume already exists')
+            raise ValueError('failed to create logical volume')
 
         # create fs
         call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
