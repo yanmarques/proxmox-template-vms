@@ -8,6 +8,7 @@ import logging
 import json
 import shlex
 import shutil
+import secrets
 import time
 import re
 import sys
@@ -66,23 +67,6 @@ def path_name_of(path):
     return os.path.join(here, path)
 
 
-def common_cfg_reader(path):
-    ''' 
-    Parses given file using common proxmox configuration syntax.
-    '''
-
-    with open(path) as r:
-        data = r.read()
-
-    cfg = {}
-    for _line in data.split('\n'):
-        line = _line.strip()
-        if line:
-            key, value = line.split(':')
-            cfg[key] = value.strip()
-    return cfg
-
-
 def find_pvesh_value(cfg, inner_key):
     '''
     Try to find a value inside pve configuration.
@@ -126,13 +110,52 @@ def setup_logging(log_path):
     logger.setLevel(logging.DEBUG)
 
 
-class MemoryStats:
-    def __init__(self, path=None):
-        self._path = path or path_name_of('.memory')
-        self._load_stats()
+class CommonCfg:
+    '''
+    Handle common promox data format I/O.
+    '''
+
+    def __init__(self, path):
+        self._path = path
+
+    def write(self, data_dict):
+        '''
+        Write data dictionary object in a common format.
+        '''
+
+        content = (f'{k}: {v}\n' for k, v in data_dict.items())
+
+        with open(self._path, 'w') as wr:
+            return wr.write(''.join(content))
+
+    def read(self):
+        ''' 
+        Parses given file using common proxmox configuration syntax.
+        '''
+
+        with open(self._path) as r:
+            data = r.read()
+
+        cfg = {}
+        for _line in data.split('\n'):
+            line = _line.strip()
+            if line:
+                key, value = line.split(':')
+                cfg[key] = value.strip()
+        return cfg
+
+
+class ConfigIOInterface:
+    def __init__(self, path, load=False):
+        self._cfg_handler = CommonCfg(path)
+        if load:
+            self.reload()
 
     def last(self, key, default=None):
         return self._stats.get(key, default)
+
+    def get(self, *args, **kwargs):
+        return self.last(*args, **kwargs)
 
     def put(self, key, value):
         self._stats[key] = value
@@ -151,16 +174,22 @@ class MemoryStats:
             self._flush()
 
     def _flush(self):
-        content = (f'{k}: {v}\n' for k, v in self._stats.items())
+        self._cfg_handler.write(self._stats)
 
-        with open(self._path, 'w') as wr:
-            wr.write(''.join(content))
-
-    def _load_stats(self):
-        if os.path.exists(self._path):
-            self._stats = common_cfg_reader(self._path)
+    def reload(self):
+        if os.path.exists(self._cfg_handler._path):
+            self._stats = self._cfg_handler.read()
         else:
             self._stats = dict()
+
+
+class MemoryStats(ConfigIOInterface):
+    def __init__(self, path=None, **kwargs):
+        super().__init__(path or path_name_of('.memory'), **kwargs)
+
+        # not loaded yet?
+        if self._stats is None:
+            self.reload()
 
 
 class Machine:
@@ -170,14 +199,27 @@ class Machine:
 
     def __init__(self, vmid, parse_config=True):
         self.vmid = vmid
+        self._cfg = ConfigIOInterface(path_name_of(f'config/{self.vmid}.conf'))
         if parse_config:
-            self._read_config()
+            self._cfg.reload()
 
     @property
     def template_vmid(self):
         '''Template's virtual machine ID'''
 
         return self._cfg.get('template_vmid')
+
+    @property
+    def lv_data_name(self):
+        '''Name of Logical Volume holding vm specific data'''
+
+        return self._cfg.get('lv_data_name')
+
+    @lv_data_name.setter
+    def lv_data_name(self, value):
+        '''Sets name of Logical Volume holding vm specific data'''
+
+        self._cfg.put('lv_data_name', value)
 
     @property
     def name(self):
@@ -234,10 +276,11 @@ class Machine:
         disk_lv = parse_disk_lv(disk)
         return bus_dev, disk_lv
 
-    def atach_disk(self, bus_device, lv_name, add_to_boot=True):
+    def atach_disk(self, bus_device, lv_name, options='', add_to_boot=True):
         self._hard_unlock_server()
 
-        pvesh('create', f'qemu/{self.vmid}/config', f'-{bus_device} local-lvm:{lv_name}')
+        value = f'-{bus_device} local-lvm:{lv_name},{options}'
+        pvesh('create', f'qemu/{self.vmid}/config', value)
         if add_to_boot:
             boot_order = self.get_boot_order()
             if boot_order:
@@ -278,9 +321,6 @@ class Machine:
     def start(self, options=None):
         pvesh('create', f'qemu/{self.vmid}/status/start', options=options)
 
-    def _read_config(self):
-        self._cfg = common_cfg_reader(path_name_of(f'config/{self.vmid}.conf'))
-
 
 def take_disk_snapshot(srcvm: Machine, 
                        dstvm: Machine, 
@@ -289,7 +329,7 @@ def take_disk_snapshot(srcvm: Machine,
                        activate=True):
     '''Take snapshot from disk and return logical volume name'''
 
-    lv_path = f'pve/{lv_name}'
+    lv_path = f'{node}/{lv_name}'
     snap = f'vm-{dstvm.vmid}-{srcvm.name}-{dstvm.name}-disk-{disk_index}-snap'
 
     # create snapshot
@@ -297,8 +337,29 @@ def take_disk_snapshot(srcvm: Machine,
 
     # activate snapshot
     if activate:
-        call(f'lvchange -a y -K pve/{snap}')
+        call(f'lvchange -a y -K {node}/{snap}')
     return snap
+
+
+def ensure_machine_has_config_data(vm: Machine):
+    if vm.lv_data_name is None:
+        name = f'vm-{vm.name}-data-{secrets.token_hex(6)}'
+
+        # create a minimal lv
+        call(f'lvcreate -n {name} -L 4M {node}')    
+
+        # save created lv name
+        vm.lv_data_name = name
+
+    disks = vm.list_disks()
+    if 'scsi30' in disks:
+        logger.debug('logical volume disk already attached to vm: %s', vm.name)
+    else:
+        # attack scsi disk as cdrom media, so it goes read-only to guest vm
+        vm.atach_disk('scsi30', 
+                      vm.lv_data_name, 
+                      options='media=cdrom', 
+                      add_to_boot=False)
 
 
 def configure_vm_and_jump(vm, memory):
@@ -342,6 +403,8 @@ def on_pre_start(vm: Machine, memory: MemoryStats):
     # already seen
     if memory.seen(vm.vmid):
         return 0
+
+    ensure_machine_has_config_data(vm)
 
     return configure_vm_and_jump(vm, memory)
 

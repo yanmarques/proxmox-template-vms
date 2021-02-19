@@ -217,25 +217,31 @@ Describe "ensure_formated_and_mounted()"
     End
 End
 
-Describe "receive_host_data()"
-    It "calls mount with last scsi disk"
-        mount_strategy() {
+Describe "receive_host_data()" current
+    It "calls mount with default host cdrom as read-only"
+        mount() {
             # shellcheck disable=SC2034
             args="$*"
             %preserve args
         }
 
-        list_scsi_disks() {
-            echo some
-            echo bar
-            echo foo
+        call_receive_host_data() {
+            cdrom="$rw_dir"/foo
+            %preserve cdrom
+
+            # create a fake block device
+            mknod "$cdrom" b 0 0
+
+            # shellcheck disable=SC2034
+            default_host_cdrom="$cdrom"
+            receive_host_data
         }
 
-        When call receive_host_data
+        When call call_receive_host_data
         The status should be success
         The output should include "succeded" 
 
         # shellcheck disable=SC2154
-        The variable args should eq "foo $runtime_dir" 
+        The variable args should eq "-o ro $cdrom $runtime_dir" 
     End
 End
