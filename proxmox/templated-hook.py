@@ -348,7 +348,7 @@ def ensure_machine_has_config_data(vm: Machine):
         return
 
     if vm.lv_data_name is None:
-        name = f'vm-{vm.name}-data'
+        name = f'vm-{vm.vmid}-data'
 
         # create a minimal lv
         call(f'lvcreate -n {name} -L 4M {node}')
