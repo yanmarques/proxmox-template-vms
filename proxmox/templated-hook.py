@@ -297,7 +297,12 @@ class Machine:
 
     def detach_disk(self, bus_device):
         # keep it as cache, maybe we won't use need, don't know
-        disk_value = self.list_disks()[bus_device]
+        disks = self.list_disks()
+
+        if bus_device not in disks:
+            return False
+
+        disk_value = disks[bus_device]
         
         # make sure we can modify configurations
         self._hard_unlock_server()
@@ -315,7 +320,7 @@ class Machine:
         for device, v in config.items():
             if disk_lv in str(v):
                 pvesh('set', f'qemu/{self.vmid}/config', f'-delete {device}')
-                break
+                return True
 
     def start(self, options=None):
         pvesh('create', f'qemu/{self.vmid}/status/start', options=options)
@@ -478,7 +483,13 @@ class MachineHandler:
 
         for bus_dev in bus_devices.split(','):
             # so detach which also removes it from boot
-            self.vm.detach_disk(bus_dev)
+            result = self.vm.detach_disk(bus_dev)
+            if result is True:
+                logger.info('disk detached: [%s]', bus_dev)
+            elif result is False:
+                logger.error('failed to detach device: [%s]', bus_dev)
+            else:
+                logger.info('device was removed without getting unsed: [%s]', bus_dev)
 
         # forget about vm
         self.memory.delete(self.vm.vmid)
