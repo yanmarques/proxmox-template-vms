@@ -33,6 +33,9 @@ logger = logging.getLogger(__file__)
 # global node
 node = os.getenv('TEMPLATED_NODE', 'pve')
 
+# global disk uuid
+templated_disk_uuid = '3f484b83-c07a-4aad-b9b7-39c80cccab0c'
+
 
 def call(command):
     '''Executes given command as a subprocess and returns it's output.'''
@@ -210,18 +213,6 @@ class Machine:
         return self._cfg.get('template_vmid')
 
     @property
-    def lv_data_name(self):
-        '''Name of Logical Volume holding vm specific data'''
-
-        return self._cfg.get('lv_data_name')
-
-    @lv_data_name.setter
-    def lv_data_name(self, value):
-        '''Sets name of Logical Volume holding vm specific data'''
-
-        self._cfg.put('lv_data_name', value)
-
-    @property
     def name(self):
         '''Get virtual machine name'''
 
@@ -340,30 +331,34 @@ def take_disk_snapshot(srcvm: Machine,
         call(f'lvchange -a y -K {node}/{snap}')
     return snap
 
+def populate_host_files(directory):
+    with open(os.path.join(directory, 'someshit'), 'w') as w:
+        pass
 
-def ensure_machine_has_config_data(vm: Machine):
-    disks = vm.list_disks()
-    if 'scsi30' in disks:
-        logger.debug('logical volume disk already attached to vm: %s', vm.name)
-        return
 
-    if vm.lv_data_name is None:
-        name = f'vm-{vm.vmid}-data'
+def prepare_templated_host_device(vm: Machine):
+    name = f'vm-{vm.vmid}-host-data'
+    device = f'/dev/{node}/{name}'
 
-        # create a minimal lv
-        call(f'lvcreate -n {name} -L 4M {node}')
+    # create a minimal lv
+    pvesh('create',
+            '/storage/local-lvm/content',
+            f'--filename={name} --vmid={vm.vmid} --size=4M')
 
-        # create fs
-        call(f'mkfs.ext4 /dev/{node}/{name}')
+    # create fs
+    call(f'mkfs.ext4 -U {templated_disk_uuid} {device}')
 
-        # save created lv name
-        vm.lv_data_name = name
+    tmp_dir = tempfile.mkdtemp()
 
-     # attack scsi disk as cdrom media, so it goes read-only to guest vm
-        vm.atach_disk('scsi30', 
-                      vm.lv_data_name, 
-                      options='media=cdrom', 
-                      add_to_boot=False)
+    try:
+        call(f'mount {device} {tmp_dir}')
+        populate_host_files(tmp_dir)
+        call(f'umount {tmp_dir}')
+    finally:
+        # remove temporary directory
+        shutil.rmtree(tmp_dir)
+
+    return name
 
 
 def configure_vm_and_jump(vm, memory):
@@ -388,11 +383,18 @@ def configure_vm_and_jump(vm, memory):
     bus = ''.join(l for l in tplt_bus_device if not l.isdigit())
     cloned_bus_dev = f'{bus}{vm_disk_dev}' 
 
-    # remember the cloned bus/device 
-    memory.put(vm.vmid, cloned_bus_dev)
-
     # attach new disk
     vm.atach_disk(cloned_bus_dev, thin_pool_clone)
+
+    # prepare host device
+    lv_name = prepare_templated_host_device(vm)
+    lv_bus_dev = f'{bus}{vm_disk_dev + 1}'
+
+    # attach host disk
+    vm.atach_disk(lv_bus_dev, lv_name)
+
+    # remember the cloned bus/device 
+    memory.put(vm.vmid, ','.join([cloned_bus_dev, lv_bus_dev]))
 
     # start the vm without caring about lock file
     vm.start('-skiplock')
@@ -408,8 +410,6 @@ def on_pre_start(vm: Machine, memory: MemoryStats):
     if memory.seen(vm.vmid):
         return 0
 
-    ensure_machine_has_config_data(vm)
-
     return configure_vm_and_jump(vm, memory)
 
 
@@ -417,13 +417,14 @@ def remove_old_configuration(vm: Machine, memory: MemoryStats):
     assert memory.seen(vm.vmid), 'VM id has not registered to remove old configuration'
 
     # in memory we may find the last bus/device
-    bus_device = memory.last(vm.vmid)
+    bus_devices = memory.last(vm.vmid)
 
-    # so detach which also removes it from boot
-    vm.detach_disk(bus_device)
+    for bus_dev in bus_devices.split(','):
+        # so detach which also removes it from boot
+        vm.detach_disk(bus_dev)
 
-    # forget about vm
-    memory.delete(vm.vmid)
+        # forget about vm
+        memory.delete(vm.vmid)
 
 
 def main():
