@@ -118,12 +118,12 @@ def parse_disk_lv(disk):
             return disk_frags[1]
 
 
-def setup_logging(log_path):
+def setup_logging(log_path, vmid):
     '''
     Configure logging to use file handler
     '''
 
-    log_fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    log_fmt = logging.Formatter('%(asctime)s [%(levelname)s] [VMID={}] %(message)s'.format(vmid))
     file_handler = logging.FileHandler(log_path)
     file_handler.setFormatter(log_fmt)
     logger.addHandler(file_handler)
@@ -568,9 +568,6 @@ class MachineHandler:
         # remember the cloned bus/device 
         self.memory.put(self.vm.vmid, ','.join([info['bus_dev'], lv_bus_dev]))
 
-    def __str__(self):
-        return f'{self.__class__.__name__} [VMID={self.vm.vmid}]'
-
     
 class MachineEventDispatcher:
     handler_factory = MachineHandler
@@ -583,12 +580,10 @@ class MachineEventDispatcher:
         event_handler = events.get(event)
 
         if event_handler is None:
-            logger.error('received a not registered event [%s] on handler [%s]', 
-                         event, 
-                         self._handler)
+            logger.error('received a not registered event [%s]', event)
             return
 
-        logger.info('received event [%s] for handler [%s]', event, self._handler)
+        logger.info('received event [%s]', event)
         
         try:
             return event_handler() or 0
@@ -605,7 +600,7 @@ def main():
     vmid = sys.argv[1].strip()
     event = sys.argv[2].strip()
 
-    setup_logging('/var/log/templated.log')
+    setup_logging('/var/log/templated.log', vmid)
 
     dispatcher = MachineEventDispatcher(vmid)
     return dispatcher.dispatch(event)
