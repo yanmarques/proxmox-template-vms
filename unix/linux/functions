@@ -117,7 +117,7 @@ start_disk_from_partition() {
 	uuid="${1:?}"
 
 	# ensure uuid is valid just getting the device path 
-	dev_part="$(blkid --uuid="$uuid")"
+	dev_part="$(find_device_by_uuid "$uuid")"
 	if [ "$?" -eq 2 ]; then
 		err "no such device: $uuid"
 		return 2
@@ -136,7 +136,7 @@ find_device_by_uuid() {
 	local uuid
 	uuid="${1:?}"
 
-	lsblk --output UUID,PATH | grep "^$uuid" | awk '{print $2}'
+	blkid --uuid="$uuid"
 }
 
 detect_partition() {
