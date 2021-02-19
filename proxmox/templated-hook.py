@@ -133,6 +133,24 @@ def setup_logging(log_path, vmid):
     logger.setLevel(logging.DEBUG)
 
 
+def format_size_to_int(size):
+    # see https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
+
+    power = 2**10
+    power_labels = {'': 0, 'K': 1, 'M': 2, 'G': 3, 'T': 4}
+
+    # get number removing trailing power labels
+    total = int(size.rstrip(''.join(power_labels)))
+
+    # get power from size label, removing leading numbers
+    power_of = power_labels[size.lstrip('0123456789')]
+
+    while power_of > 0:
+        total *= power
+        power_of -= 1
+    return total
+
+
 class CommonCfg:
     '''
     Handle common promox data format I/O.
@@ -290,7 +308,7 @@ class Machine:
             _, disk = disk_pack
             size = find_pvesh_value(disk, 'size')
             if size:
-                return int(size.rstrip('G'))
+                return format_size_to_int(size)
 
         bus_dev, disk = sorted(all_disks, key=sort_key)[0]
         disk_lv = parse_disk_lv(disk)
