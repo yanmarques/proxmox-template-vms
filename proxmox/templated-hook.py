@@ -431,6 +431,9 @@ class HostDeviceFormatter:
         result = self.vm.create_disk(self.filename, self.disk_size)
 
         if result is False:
+            logger.warn('logical volume [%s] already exists, removing...', 
+                        self.filename)
+
             # disk already exists, remove it
             self.vm.remove_by_lv_name(self.filename)
 
