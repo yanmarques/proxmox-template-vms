@@ -444,13 +444,20 @@ class MachineHandler:
         if self.memory.seen(self.vm.vmid):
             return 0
 
+        # make setup calls
+        if self.vm.is_template_vm:
+            setup = self._seed_template_vm
+        elif self.vm.template_vmid is not None:
+            setup = self._setup_template_based_vm
+        else:
+            logger.error('vm [%s] is not a template neither a template-based vm', 
+                         self.vm.vmid)
+            return 2
+
         # make it available
         self.formatter.format()
 
-        if self.vm.is_template_vm:
-            self._setup_template_vm()
-        else:
-            self._setup_template_based_vm()
+        setup()
 
         # create files inside host disk
         self.seeder.seed(self.formatter.device)
