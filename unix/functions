@@ -142,6 +142,13 @@ is_directory_bind() {
 		"$binds_config" > /dev/null 2>&1
 }
 
+is_empty_directory() {
+	local target_dir
+	target_dir="${1:?}"
+
+	[ -z "$(ls "$target_dir")" ]
+}
+
 # given a root directory, mount every file to the root filesystem
 #
 # imagine the following file structure:
@@ -154,17 +161,18 @@ is_directory_bind() {
 # mounted at /etc/wireguard/wg0.conf
 # 
 bind_files() {
-	local target
+	local target fake_path
 	target="${1:?}"
 
-	for path in "$target"/*; do
-		# avoid an infinite loop
-		if [ -z "$path" ]; then
-			break
-		fi
+	# ensure directory
+	[ -d "$target" ] || return 1
 
+	# ensure not empty
+	is_empty_directory "$target" && return 2
+
+	for path in "$target"/*; do
 		if [ -d "$path" ]; then
-			local fake_path="${path#${binds_dir}}"
+			fake_path="${path#${binds_dir}}"
 			
 			if ! is_directory_bind "$fake_path"; then
 				# recursive function call when path is a directory
@@ -214,9 +222,19 @@ mount_user_home_dir() {
 	mount_strategy "$(rw_base_home)" "$base_home_dir"
 }
 
+bind_user_files() {
+	bind_files "$binds_dir"
+	status_code="$?"
+
+	# ignore when binds directory is empty
+	[ "$status_code" -eq 2 ] && return 0
+
+	return "$status_code"
+}
+
 # execute this at startup
 start_user_custom_config() {
-	exec_log "binding user files" bind_files "$binds_dir"
+	exec_log "binding user files" bind_user_files
 	exec_log "calling user rc script" "$rc_config"
 }
 

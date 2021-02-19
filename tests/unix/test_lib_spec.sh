@@ -248,12 +248,16 @@ End
 
 Describe "bind_files()" current
     create_dirs() {
-        echo "creating directoriess"
         load_runtime_vars
 
         # create a fake home
         mkdir -p "$(rw_base_home)"
         setup_vm_user_data
+    }
+
+    # sanity check
+    mount_strategy() {
+        :
     }
 
     Before create_dirs
@@ -276,7 +280,7 @@ Describe "bind_files()" current
         The output should start with /foo/bar/baz
     End
 
-    It "calls mount with directory when is a bind dir"
+    It "calls mount with empty directory when is a bind dir"
         mount_strategy() {
             echo "$2"
         }
@@ -287,8 +291,7 @@ Describe "bind_files()" current
 
             # register as bind dir
             # shellcheck disable=SC2154
-            echo "$expected_dir" >> "$binds_config"
-
+            echo /foo/bar >> "$binds_config"
             bind_files "$binds_dir"
         }
 
@@ -297,7 +300,38 @@ Describe "bind_files()" current
         The output should start with /foo/bar
     End
 
-    It "backup old content"
+    It "calls mount with non-empty directory when is a bind dir"
+        mount_strategy() {
+            echo "$2"
+        }
+
+        call_bind_files() {
+            expected_dir="$binds_dir"/foo/bar
+            mkdir -p "$expected_dir"/bazz
+
+            # register as bind dir
+            # shellcheck disable=SC2154
+            echo /foo/bar >> "$binds_config"
+            bind_files "$binds_dir"
+        }
+
+        When call call_bind_files
+        The status should be success
+        The output should start with /foo/bar
+    End
+
+    It "fails with empty directory"
+        call_bind_files() {
+            mkdir -p "$binds_dir"/foo/
+
+            bind_files "$binds_dir"/foo/
+        }
+
+        When call call_bind_files
+        The status should eq 2
+    End
+
+    It "backup original file when present"
         mount_strategy() {
             return 0
         }
@@ -305,22 +339,28 @@ Describe "bind_files()" current
         call_bind_files() {
             register_tmp_dir
             relative_path="$(last_tmp_dir)"/foo/bar
+            mkdir -p "$relative_path"
             %preserve relative_path
 
+            # create bind directory
             expected_dir="$binds_dir""$relative_path"
-
             mkdir -p "$expected_dir"
+
+            # create file to be bound
             touch "$expected_dir"/foo
-            echo "baz" > "$relative_path"/foo
+
+            # create original file
+            touch "$relative_path"/foo
 
             bind_files "$binds_dir"
         }
 
         backup_foo_file() {
-            [ "$(cat "$relative_path"/foo.old)" == "baz" ]
+            [ -f "$relative_path"/foo.old ]
         }
 
         When call call_bind_files
+        The output should not include failed
         Assert backup_foo_file
     End
 End
