@@ -16,6 +16,9 @@ hooks_storage = os.getenv('TEMPLATED_HOOK_STORAGE', 'local-hooks')
 # default log destination
 log_file = os.getenv('TEMPLATED_LOG_FILE', '/var/log/templated.log')
 
+# where operational data will be stored
+var_dir = os.getenv('TEMPLATED_VAR_DIR', '/var/lib/templated')
+
 
 #################################################
 # Runtime vars

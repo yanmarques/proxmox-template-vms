@@ -1,4 +1,4 @@
-from .vars import node, log_file
+from .vars import node, log_file, var_dir
 
 import subprocess
 import logging
@@ -55,10 +55,9 @@ def pvesh(method,
 
 
 def path_name_of(path):
-    '''Build an absolute path relative this module location.'''
+    '''Build an absolute path relative the var location.'''
 
-    here = os.path.dirname(__file__)
-    return os.path.join(here, path)
+    return os.path.join(var_dir, path)
 
 
 def find_pvesh_value(cfg, inner_key):
