@@ -1,13 +1,10 @@
 from .client import Machine
 from .vars import node, templated_disk_uuid
-from .utils import call
+from .utils import call, logger
 
-import logging
 import tempfile
 import shutil
 import os
-
-logger = logging.getLogger(__file__)
 
 
 class HostDeviceFormatter:

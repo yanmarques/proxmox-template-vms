@@ -6,7 +6,7 @@ import json
 import shlex
 import os
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger('templated')
 
 
 def call(command, only_code_stat=False):

@@ -8,12 +8,10 @@ from .utils import (
     format_size_to_int,
     parse_disk_lv,
     path_name_of,
+    logger,
 )
 
-import logging
 import os
-
-logger = logging.getLogger(__file__)
 
 
 def get_larger_disk(vm: Machine):
