@@ -299,21 +299,6 @@ class Machine:
 
         return pvesh('get', f'qemu/{self.vmid}/config', options=options)
 
-    def get_root_disk(self):
-        all_disks = self.list_disks().items()
-        if not all_disks:
-            return None
-
-        def sort_key(disk_pack):
-            _, disk = disk_pack
-            size = find_pvesh_value(disk, 'size')
-            if size:
-                return format_size_to_int(size)
-
-        bus_dev, disk = sorted(all_disks, key=sort_key)[0]
-        disk_lv = parse_disk_lv(disk)
-        return bus_dev, disk_lv
-
     def attach_disk(self, bus_device, lv_name, options='', add_to_boot=True):
         self._hard_unlock_server()
 
@@ -394,6 +379,26 @@ class Machine:
         pvesh('create', f'qemu/{self.vmid}/status/start', options=options)
 
 
+def get_larger_disk(vm: Machine):
+    '''
+    Returns the largest disk of vm
+    '''
+
+    all_disks = vm.list_disks().items()
+    if not all_disks:
+        return None, None
+
+    def sort_key(disk_pack):
+        _, disk = disk_pack
+        size = find_pvesh_value(disk, 'size')
+        if size:
+            return format_size_to_int(size)
+
+    bus_dev, disk = sorted(all_disks, key=sort_key)[0]
+    disk_lv = parse_disk_lv(disk)
+    return bus_dev, disk_lv
+
+
 def take_disk_snapshot(srcvm: Machine, 
                        dstvm: Machine, 
                        lv_name, 
@@ -417,15 +422,19 @@ def disk_info(template_vm: Machine, vm: Machine=None):
     vm = vm or template_vm
 
     # get template root's bus/device and logical volume name
-    tplt_bus_device, root_lv = template_vm.get_root_disk()
+    tplt_bus_device, root_lv = get_larger_disk(template_vm)
+
+    # default bus type: scsi
+    if tplt_bus_device is None:
+        tplt_bus_device = 'scsi0'
 
     # calculate a free device to attach
     disk_index = len(vm.list_disks(filter_by_bus=tplt_bus_device))
 
     # we need a way to detect the bus from template's root disk
     # and we know it is composed by a bus name and a device number
-    # what we do? remove every digit from name
-    bus = ''.join(l for l in tplt_bus_device if not l.isdigit())
+    # what we do? remove trailing digits from name
+    bus = tplt_bus_device.rstrip('0123456789')
 
     return {
         'bus': bus,
@@ -455,9 +464,7 @@ class HostDeviceFormatter:
             logger.warn('logical volume [%s] already exists, removing...', 
                         self.filename)
 
-            # TODO use a reliable method to remove lv
-            # disk already exists, remove it
-            call(f'lvremove -y {self.device}')
+            self.remove_device()
 
             # try to recreate the disk
             assert self.vm.create_disk(self.filename, 
@@ -466,6 +473,11 @@ class HostDeviceFormatter:
             
         # create fs
         call(f'mkfs.ext4 -U {templated_disk_uuid} {self.device}')
+
+    def remove_device(self):
+        # TODO use a reliable method to remove lv
+        # disk already exists, remove it
+        call(f'lvremove -y {self.device}')
 
 
 class HostDeviceSeeder:
@@ -534,7 +546,13 @@ class MachineHandler:
         # make it available
         self.formatter.format()
 
-        setup()
+        # ensure setup returns OK otherwise stop
+        status_code = setup() or 0
+        if status_code != 0:
+            # ensure device is properly removed
+            self.formatter.remove_device()
+
+            return status_code
 
         # create files inside host disk
         self.seeder.seed(self.formatter.device)
@@ -592,6 +610,11 @@ class MachineHandler:
 
         # obtain many disk informations
         info = disk_info(template_vm, self.vm)
+
+        # ensure got logical volume
+        if info['root_lv'] is None:
+            logger.error('unable to find logical name of template vm root disk')
+            return 3
 
         # take snapshot of template root disk
         thin_pool_clone = take_disk_snapshot(template_vm,
