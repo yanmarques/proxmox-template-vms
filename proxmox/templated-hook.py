@@ -613,7 +613,7 @@ class MachineHandler:
 
         # ensure got logical volume
         if info['root_lv'] is None:
-            logger.error('unable to find logical name of template vm root disk')
+            logger.error('unable to find logical volume of template-vm root disk')
             return 3
 
         # take snapshot of template root disk
