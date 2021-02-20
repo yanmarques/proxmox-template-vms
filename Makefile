@@ -1,8 +1,10 @@
+PIP:=pip
+
 proxmox:
-	@cd proxmox && pip install .
+	@cd proxmox && $(PIP) install .
 
 proxmox-uninstall:
-	@pip uninstall -y templated
+	@$(PIP) uninstall -y templated
 
 linux: install-lib
 	@install -m 755 unix/linux/maybe-start-templated-vm /usr/sbin/
