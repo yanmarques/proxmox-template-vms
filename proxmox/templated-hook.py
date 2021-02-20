@@ -651,7 +651,7 @@ class MachineEventDispatcher:
         event_handler = events.get(event)
 
         if event_handler is None:
-            logger.error('received a not registered event [%s]', event)
+            logger.warn('received a not registered event [%s]', event)
             return
 
         logger.info('received event [%s]', event)
