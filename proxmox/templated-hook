@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+from templated.cli import to_hook
+
+import sys
+
+
+def main():
+    '''
+    Entrypoint function for proxmox hooks
+    '''
+
+    if len(sys.argv) != 3:
+        print(f'Usage: {sys.argv[0]} vmid event')
+        return 128
+
+    vmid = sys.argv[1].strip()
+    event = sys.argv[2].strip()
+
+    return to_hook(vmid, event)
+    
+
+if __name__ == "__main__":
+	sys.exit(main())
