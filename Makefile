@@ -1,8 +1,8 @@
 proxmox:
-	@cd proxmox && bash manage.sh install
+	@cd proxmox && pip install .
 
 proxmox-uninstall:
-	@cd proxmox && bash manage.sh uninstall
+	@pip uninstall -y templated
 
 linux: install-lib
 	@install -m 755 unix/linux/maybe-start-templated-vm /usr/sbin/
