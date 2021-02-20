@@ -44,3 +44,4 @@ class MachineConfigManager:
 
         self.vm._cfg.remove('is_template_vm')
         self.vm._cfg.remove('template_vmid')
+        self.vm.set_config('-delete hookscript')
