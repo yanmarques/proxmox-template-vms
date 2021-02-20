@@ -74,7 +74,7 @@ change_home_perm_err=9
 
 rw_base_home() {
 	# user home directory location on rw device
-	echo "$rw_dir"/home
+	echo "$rw_dir""$base_home_dir"
 }
 
 fill_skeleton_directory() {
@@ -287,7 +287,7 @@ ensure_formated_and_mounted() {
 	start_disk "$disk" -B "$disk"1 "$@"
 }
 
-receive_host_data() {
+mount_host_data() {
 	local device
 	device="$(find_device_by_uuid "$templated_disk_uuid")"
 

@@ -25,7 +25,13 @@ End
 
 Describe "setup_vm_user_data()"
     It "creates basic structure"
-        When call setup_vm_user_data
+        setup_vm_user_data_with_fake_home() {
+            # shellcheck disable=SC2034
+            base_home_dir=/home
+            setup_vm_user_data
+        }
+
+        When call setup_vm_user_data_with_fake_home
         The entire output should not include failed
         Assert has_default_rw_files
     End
@@ -35,15 +41,17 @@ Describe "setup_vm_user_data()"
             setup_vm_user_data
 
             # shellcheck disable=SC2154
-            echo testing > "$rw_dir"/config/rc.local
-            echo testing > "$rw_dir"/config/bind-dirs.manifest
+            echo testing > "$rc_config"
+
+            # shellcheck disable=SC2154
+            echo testing > "$binds_config"
             
             setup_vm_user_data
         }
 
         When call make_two_setups
         The entire output should not include failed
-        Assert same_contents "$rw_dir"/config/rc.local "$rw_dir"/config/bind-dirs.manifest
+        Assert same_contents "$rc_config" "$binds_config"
     End
 
     It "only calls hook when home directory is missing"
@@ -53,7 +61,7 @@ Describe "setup_vm_user_data()"
         }
 
         setup_with_home_dir_present() {
-            mkdir "$(rw_base_home)"
+            mkdir -p "$(rw_base_home)"
             setup_vm_user_data
         }
 
@@ -217,32 +225,19 @@ Describe "ensure_formated_and_mounted()"
     End
 End
 
-Describe "receive_host_data()"
+Describe "mount_host_data()"
     It "calls mount with default host cdrom as read-only"
         mount() {
-            # shellcheck disable=SC2034
-            args="$*"
-            %preserve args
+            echo "$1"
         }
 
-        call_receive_host_data() {
-            cdrom="$rw_dir"/foo
-            %preserve cdrom
-
-            # create a fake block device
-            mknod "$cdrom" b 0 0
-
-            # shellcheck disable=SC2034
-            default_host_cdrom="$cdrom"
-            receive_host_data
+        find_device_by_uuid() {
+            echo /foo/baz
         }
 
-        When call call_receive_host_data
+        When call mount_host_data
         The status should be success
-        The output should include "succeded" 
-
-        # shellcheck disable=SC2154
-        The variable args should eq "-o ro $cdrom $runtime_dir" 
+        The output should start with /foo/baz 
     End
 End
 

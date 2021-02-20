@@ -29,7 +29,7 @@ Describe "start_exec()"
     End
 
     It "exits when detect a template vm"
-        receive_host_data() {
+        mount_host_data() {
             :
         }
 

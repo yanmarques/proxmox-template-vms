@@ -23,9 +23,9 @@ has_default_rw_files() {
     test "$(stat --format=%a "$target"/config/rc.local)" = 755 || \
         err "wrong rc.local permission" 
 
-    test -f "$target"/config/bind-dirs.manifest || err "missing bind-dirs.manifest"
-    test "$(stat --format=%a "$target"/config/bind-dirs.manifest)" = 644 || \
-        err "wrong bind-dirs.manifest permission"
+    test -f "$target"/config/bind-dirs.conf || err "missing bind-dirs.conf"
+    test "$(stat --format=%a "$target"/config/bind-dirs.conf)" = 644 || \
+        err "wrong bind-dirs.conf permission"
 }
 
 testit() {

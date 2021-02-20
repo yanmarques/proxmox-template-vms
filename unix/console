@@ -16,7 +16,7 @@ pre_start() {
 start_exec() {
     exec_log "pre-start hook" pre_start || return
 
-    exec_log "receiving host" receive_host_data || return
+    exec_log "receiving host" mount_host_data || return
 
     is_template_vm && info 'inside a template vm, exiting' && return 0
 
