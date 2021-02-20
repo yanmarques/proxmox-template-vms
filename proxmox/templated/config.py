@@ -31,7 +31,7 @@ class CommonCfg:
         for _line in data.split('\n'):
             line = _line.strip()
             if line:
-                key, value = line.split(':')
+                key, value = line.split(':', 1)
                 cfg[key] = value.strip()
         return cfg
 
