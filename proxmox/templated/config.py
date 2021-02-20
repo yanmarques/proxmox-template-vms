@@ -53,6 +53,11 @@ class ConfigIOInterface:
         self._stats[key] = value
         self._flush()
 
+    def remove(self, key):
+        if self.seen(key):
+            del self._stats[key]
+        self._flush()
+
     def update(self, **kwargs):
         self._stats.update(**kwargs)
         self._flush()

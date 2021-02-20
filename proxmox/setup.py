@@ -1,4 +1,4 @@
-from templated.vars import hooks_storage
+from templated.vars import hooks_path
 from setuptools import setup, find_packages
 from setuptools.command import install
 
@@ -9,8 +9,8 @@ import os
 class HookInstallerCommand(install.install):
     def run(self):
         super().run()
-        target_path = os.path.join(hooks_storage, 'templated-hook')
-        self.copy_file('templated-hook', hooks_storage)
+        target_path = os.path.join(hooks_path, 'templated-hook')
+        self.copy_file('templated-hook', hooks_path)
         os.chmod(target_path, 0o755)
 
 

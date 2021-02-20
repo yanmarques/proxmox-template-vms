@@ -25,7 +25,7 @@ var_dir = os.getenv('TEMPLATED_VAR_DIR', '/var/lib/templated')
 #################################################
 
 # storage used to save the main hook function
-hooks_storage = f'/var/lib/{node}{hooks_storage.lstrip("local")}/snippets'
+hooks_path = f'/var/lib/{node}{hooks_storage.lstrip("local")}/snippets'
 
 
 #################################################

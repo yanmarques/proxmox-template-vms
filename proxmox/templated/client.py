@@ -6,6 +6,7 @@ from .utils import (
     parse_disk_lv,
     path_name_of,
     find_pvesh_value,
+    vm_config_path,
 )
 
 import os
@@ -31,17 +32,31 @@ class Machine:
     This class wraps the functionality of virtual machines in proxmox.
     '''
 
-    def __init__(self, vmid, parse_config=True):
+    def __init__(self, 
+                 vmid, 
+                 parse_config=True,
+                 exists=True):
         self.vmid = vmid
-        self._cfg = ConfigIOInterface(path_name_of(f'config/{self.vmid}.conf'))
-        if parse_config:
-            self._cfg.reload()
+
+        # ensure it exists
+        if not self.exists:
+            raise ValueError(f'Unable to find VM with id {vmid}')
+
+        # setup configuration object
+        path = vm_config_path(vmid)
+        self._cfg = ConfigIOInterface(path, load=parse_config)
 
     @property
     def template_vmid(self):
         '''Template's virtual machine ID'''
 
         return self._cfg.get('template_vmid')
+
+    @template_vmid.setter
+    def template_vmid(self, vmid):
+        '''Set the id of the template vm it's based on'''
+
+        self._cfg.put('template_vmid', vmid)
 
     @property
     def is_template_vm(self):
@@ -51,11 +66,31 @@ class Machine:
 
         return self._cfg.get('is_template_vm') == '1'
 
+    @is_template_vm.setter
+    def is_template_vm(self, status):
+        '''Set whether vm is a template'''
+
+        value = '1' if status is True else '0'
+        self._cfg.put('is_template_vm', value)
+
+
     @property
     def name(self):
         '''Get virtual machine name'''
 
         return self.fetch_config()['name']
+
+    @property
+    def exists(self):
+        '''Checks whether the vm exists'''
+
+        result = self.fetch_config(call_impl=try_call)
+
+        # quite strict checking, event if errors out
+        # it must match the return code
+        if result is not None and result.returncode == 2:
+            return False
+        return True
 
     def get_boot_order(self):
         '''Retrieves string with boot order'''
@@ -86,10 +121,16 @@ class Machine:
                     break
         return disks
 
-    def fetch_config(self, options=None):
+    def fetch_config(self, options=None, **kwargs):
         '''Get proxmox vm configuration'''
 
-        return pvesh('get', f'qemu/{self.vmid}/config', options=options)
+        return pvesh('get', 
+                     f'qemu/{self.vmid}/config', 
+                     options=options,
+                     **kwargs)
+
+    def set_config(self, options, **kwargs):
+        return pvesh('set', f'qemu/{self.vmid}/config', options, **kwargs)
 
     def attach_disk(self, bus_device, lv_name, options='', add_to_boot=True):
         self._hard_unlock_server()

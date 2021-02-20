@@ -9,6 +9,12 @@ import os
 logger = logging.getLogger('templated')
 
 
+def vm_config_path(vmid):
+    '''Return the proxmox configuration path for vm'''
+
+    return f'/etc/pve/nodes/{node}/qemu-server/{vmid}.conf'
+
+
 def call(command, only_code_stat=False):
     '''Executes given command as a subprocess and returns it's output.'''
 
@@ -91,7 +97,7 @@ def parse_disk_lv(disk):
             return disk_frags[1]
 
 
-def setup_logging(vmid):
+def setup_hook_logging(vmid):
     '''
     Configure logging to use file handler
     '''
@@ -100,6 +106,18 @@ def setup_logging(vmid):
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(log_fmt)
     logger.addHandler(file_handler)
+    logger.setLevel(logging.DEBUG)
+
+
+def setup_console_logging():
+    '''
+    Configure logging to console
+    '''
+
+    log_fmt = logging.Formatter('[%(levelname)s] %(message)s')
+    stream_handler =  logging.StreamHandler()
+    stream_handler.setFormatter(log_fmt)
+    logger.addHandler(stream_handler)
     logger.setLevel(logging.DEBUG)
 
 
