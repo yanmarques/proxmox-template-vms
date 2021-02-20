@@ -4,7 +4,6 @@ from setuptools.command import install
 
 import sys
 import os
-import stat
 
 
 class HookInstallerCommand(install.install):
@@ -12,9 +11,7 @@ class HookInstallerCommand(install.install):
         super().run()
         target_path = os.path.join(hooks_storage, 'templated-hook')
         self.copy_file('templated-hook', hooks_storage)
-
-        # numerical mode: 755
-        os.chmod(target_path, stat.S_IWUSR | stat.S_IREAD | stat.S_IEXEC)
+        os.chmod(target_path, 0o755)
 
 
 setup(name='proxmox-templated',
