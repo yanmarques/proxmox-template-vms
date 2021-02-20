@@ -9,12 +9,6 @@ import os
 logger = logging.getLogger('templated')
 
 
-def vm_config_path(vmid):
-    '''Return the proxmox configuration path for vm'''
-
-    return f'/etc/pve/nodes/{node}/qemu-server/{vmid}.conf'
-
-
 def call(command, only_code_stat=False):
     '''Executes given command as a subprocess and returns it's output.'''
 

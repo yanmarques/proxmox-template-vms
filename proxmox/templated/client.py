@@ -6,7 +6,6 @@ from .utils import (
     parse_disk_lv,
     path_name_of,
     find_pvesh_value,
-    vm_config_path,
 )
 
 import os
@@ -43,7 +42,7 @@ class Machine:
             raise ValueError(f'Unable to find VM with id {vmid}')
 
         # setup configuration object
-        path = vm_config_path(vmid)
+        path = path_name_of('config/{vmid}.conf')
         self._cfg = ConfigIOInterface(path, load=parse_config)
 
     @property

@@ -1,6 +1,5 @@
-from .config import ConfigIOInterface
 from .client import Machine
-from .utils import vm_config_path, logger
+from .utils import logger
 from .vars import hooks_storage    
 
 
