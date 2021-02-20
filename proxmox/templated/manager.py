@@ -25,7 +25,7 @@ class MachineConfigManager:
         if self.vm.template_vmid is not None:
             logger.info('already has template vmid [%s]', 
                         self.vm.template_vmid)
-            choice = input('replace current template vmid? [N/y]', end='')
+            choice = input('replace current template vmid? [N/y]')
             if choice.lower() == 'n':
                 return
 
