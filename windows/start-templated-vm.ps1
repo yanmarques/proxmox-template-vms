@@ -75,7 +75,7 @@ function Main {
     }
 
     # create symbolic link to user directory
-    New-Item -Path $userPath -ItemType SymbolicLink -Value $theUserDir
+    New-Item -Path $userPath -ItemType SymbolicLink -Target $theUserDir
 
     # run user startup script
     Invoke-Command -ScriptBlock {powershell $startupFile}
