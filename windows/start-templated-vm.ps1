@@ -2,11 +2,13 @@ param (
     [Parameter(Mandatory)] $userPath
 )
 
-function Main {
-    Write-Output $env:UserName
-    Write-Output $env:ComputerName
-    Write-Output $env:UserDomain
+$username = 'Administrator'
+$password = 'password'
 
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword
+
+function Main {
     # fetch every disk
     $disks = Get-Disk
 
@@ -41,7 +43,7 @@ function Main {
     # calculate some file paths
     $usersDir = Join-Path -Path $directory -ChildPath Users
     $userFromPath = Split-Path -Path $userPath -Leaf
-    $theUserDir = Join-Path -Path $usersDir -ChildPath $userFromPath
+    $rwUserDir = Join-Path -Path $usersDir -ChildPath $userFromPath
 
     $configDir = Join-Path -Path $directory -ChildPath Config
     $startupFile = Join-Path -Path $configDir -ChildPath "Startup.ps1"
@@ -60,7 +62,8 @@ function Main {
         # /E - copy directories and subdirectories
         # /C - continue even when something failed
         # /Q - quiet
-        Invoke-Command -ScriptBlock {xcopy $userPath $theUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
+        #Invoke-Command -ScriptBlock {xcopy $userPath $rwUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
+        Copy-Item -Path $userPath -Destination $rwUserDir -Recurse -Credential $credential
 
         # create config directory
         New-Item -Path $configDir -ItemType Directory
@@ -72,17 +75,17 @@ function Main {
     # maybe remove user directory
     if (Test-Path -Path $userPath) {
         # first remove all subdirectories and files 
-        Get-ChildItem -Path $userPath -Recurse | Remove-Item -Recurse -Force
+        Get-ChildItem -Path $userPath -Recurse | Remove-Item -Recurse -Force -Credential $credential
         
         # then remove the actual user directory
-        Remove-Item -Path $userPath -Recurse -Force
+        Remove-Item -Path $userPath -Recurse -Force -Credential $credential
     }
 
     # create symbolic link to user directory
-    New-Item -ItemType SymbolicLink -Path $userPath -Target $theUserDir -Force
+    New-Item -ItemType SymbolicLink -Path $userPath -Target $rwUserDir -Force -Credential $credential
 
     # run user startup script
-    Invoke-Command -ScriptBlock {powershell $startupFile}
+    Invoke-Command -ScriptBlock {powershell $startupFile} -Credential $credential
 }
 
 # send error and output to log files
