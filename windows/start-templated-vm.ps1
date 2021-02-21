@@ -3,6 +3,10 @@ param (
 )
 
 function Main {
+    Write-Output $env:UserName
+    Write-Output $env:ComputerName
+    Write-Output $env:UserDomain
+
     # fetch every disk
     $disks = Get-Disk
 
@@ -75,7 +79,7 @@ function Main {
     }
 
     # create symbolic link to user directory
-    New-Item -Path $userPath -ItemType SymbolicLink -Target $theUserDir
+    New-Item -ItemType SymbolicLink -Path $userPath -Target $theUserDir -Force
 
     # run user startup script
     Invoke-Command -ScriptBlock {powershell $startupFile}
