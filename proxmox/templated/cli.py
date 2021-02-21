@@ -29,7 +29,7 @@ def process_request(arguments):
     if action == 'add':
         manager.set_template_vm(arguments.template_vmid)
     elif action == 'remove':
-        manager.remove_all
+        manager.remove_all()
 
     logger.info('done!')
 
