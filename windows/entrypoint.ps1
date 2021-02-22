@@ -1,5 +1,6 @@
 # fetch every disk
 $disks = Get-Disk
+$disks
 
 # ensure we are on a template-based vm
 if ($disks.Count -lt 2) {
@@ -26,7 +27,7 @@ if ($isRaw) {
 $vol = $targetDisk | Get-Partition | Get-Volume
 
 # get full drive directory
-$winVolume = Get-WmiObject -Class Win32_Volume | Where DeviceID -eq $vol.Path
+$winVolume = Get-WmiObject -Class Win32_Volume | Where-Object DeviceID -eq $vol.Path
 $directory = $winVolume.Name
 
 # calculate some file paths
