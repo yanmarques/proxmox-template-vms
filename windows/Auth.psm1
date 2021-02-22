@@ -6,20 +6,19 @@ $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
 
 function Start-ElevatedPS {
     param (
-        [Parameter(Mandatory)] $Arguments,
-        [Parameter(Mandatory)] $OutFile,
-        [Parameter(Mandatory)] $ErrFile
+        [Parameter(Mandatory)] $File,
+        [Parameter(Mandatory)] $ArgumentList,
+        [Parameter(Mandatory)] $OutFile
     )
 
     $Credential = New-Object System.Management.Automation.PSCredential $UserName, $SecurePassword
     
     # Call powershell with local account credentials
-    Start-Process powershell.exe `
-        -ArgumentList $Arguments `
+    Invoke-Command `
+        -ComputerName . `
         -Credential $Credential `
-        -RedirectStandardOutput $OutFile `
-        -RedirectStandardError $ErrFile `
-        -Wait
+        -File $File `
+        -ArgumentList $ArgumentList | Out-File -FilePath $OutFile -Append
 }
 
 function Set-AdminLocalPassword {

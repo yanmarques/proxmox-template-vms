@@ -1,8 +1,8 @@
-function Start-Templated {
-    param (
-        [Parameter(Mandatory)] $UserPath
-    )
+param (
+    [Parameter(Mandatory)] $UserPath
+)
 
+function Start-Templated {
     Write-Output "[+] Fetching disks"
 
     # fetch every disk
@@ -85,3 +85,5 @@ function Start-Templated {
     # run user startup script
     Invoke-Command -FilePath $startupFile
 }
+
+Start-Templated
