@@ -1,5 +1,5 @@
 # Global settings
-$UserName = 'TemplatedLocalAcct'
+$UserName = 'Administrator'
 $Password = 'p4ssw0rd'
 
 $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
@@ -21,11 +21,18 @@ function Start-ElevatedPS {
         -RedirectStandardError $ErrFile
 }
 
-function Get-LocalAccount {
-    Get-LocalUser -Name $UserName 2> $null
+function Set-AdminLocalPassword {
+    Set-LocalUser -Name $UserName -Password $SecurePassword | Out-Null
 }
 
-function Add-LocalAccount {
-    New-LocalUser -Name $UserName -Password $SecurePassword | Out-Null
-    Add-LocalGroupMember -Group "Administrators" -Member $UserName
+function Get-IsAdmin {
+    $CurrentSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().Owner.Value
+    "S-1-5-32-544" -eq $CurrentSID
+}
+
+function Set-WinAutoLogon {
+    $RegPath = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+    New-ItemProperty -Path $RegPath -Name DefaultUserName -Value $UserName -PropertyType String | Out-Null
+    New-ItemProperty -Path $RegPath -Name DefaultPassword -Value $Password -PropertyType String | Out-Null
+    New-ItemProperty -Path $RegPath -Name AutoAdminLogon -Value 1 -PropertyType DWord | Out-Null
 }

@@ -5,6 +5,11 @@ param (
 
 Import-Module .\Auth.psm1
 
+if (!(Get-IsAdmin)) {
+    Write-Error "Current running user must be the Administrator"
+    exit 1
+}
+
 # try to obtain default script from PowerShell variables
 if ($script -eq $null) {
     $script = Join-Path -Path $PSScriptRoot -ChildPath start-templated-vm.ps1
@@ -76,12 +81,8 @@ function RegisterGPOStartupScript {
 RegisterGPOStartupScript "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0"
 RegisterGPOStartupScript -SetIsPowershell $false "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0"
 
-# ensure local account exists
-if (Get-LocalAccount) {
-    Write-Output "[+] Local account already exists"
-} else {
-    Add-LocalAccount
-    Write-Output "[+] Local account was created with success"
-}
+# ensure admin account is patched
+Set-AdminLocalPassword
+Set-WinAutoLogon
 
 Write-Output "[+] Done"
