@@ -5,6 +5,7 @@ param (
 # Default logging targets
 $LogFile = "C:\Temp\templated\log"
 $OutFile = "C:\Temp\templated\out.log"
+$ErrFile = "C:\Temp\templated\err.log"
 
 # ensure directory exists
 New-Item -Path "C:\Temp\templated\" -ItemType Directory -Force
@@ -34,6 +35,6 @@ $Arguments = "-UserPath '{1}'" -f $UserPath
 
 Write-Output "starting process at: $(Now)" >> $LogFile
 
-Start-ElevatedPS -File $Functions -ArgumentList $Arguments -OutFile $OutFile
+Start-ElevatedPS -File $Functions -ArgumentList $Arguments -OutFile $OutFile 2> $ErrFile
 
 Write-Output "ending process at: $(Now)" >> $LogFile
