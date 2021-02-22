@@ -22,7 +22,7 @@ function Start-ElevatedPS {
 }
 
 function Get-LocalAccount {
-    Get-LocalUser -Name $UserName > $null 2>&1
+    Get-LocalUser -Name $UserName 2> $null
 }
 
 function Add-LocalAccount {
