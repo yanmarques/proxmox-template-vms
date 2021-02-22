@@ -13,8 +13,10 @@ function PathName-Of {
 $AuthModule = PathName-Of "Auth.psm1"
 Import-Module $AuthModule
 
-$logFile = "C:\Temp\templated.log"
+$OutFile = "C:\Temp\templated.out.log"
+$ErrFile = "C:\Temp\templated.err.log"
 
 $Entrypoint = PathName-Of "entrypoint.ps1"
 Start-ElevatedPS -Arguments "$Entrypoint -UserPath $UserPath" `
-    -OutputFile $logFile
+    -OutFile $OutFile `
+    -ErrFile $ErrFile
