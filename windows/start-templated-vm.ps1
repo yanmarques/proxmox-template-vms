@@ -8,7 +8,7 @@ $OutFile = "C:\Temp\templated\out.log"
 $ErrFile = "C:\Temp\templated\err.log"
 
 # ensure directory exists
-New-Item -Path "C:\Temp\templated\" -ItemType Directory -Force
+New-Item -Path "C:\Temp\templated\" -ItemType Directory -Force | Out-Null
 
 Write-Output "pre-starting templated-vm" > $LogFile
 
@@ -31,7 +31,7 @@ Import-Module $AuthModule
 Write-Output "starting templated-vm" >> $LogFile
 
 $Functions = Get-FullPath "Functions.ps1"
-$Arguments = "-UserPath '{1}'" -f $UserPath
+$Arguments = "-UserPath '{0}'" -f $UserPath
 
 Write-Output "starting process at: $(Now)" >> $LogFile
 
