@@ -34,5 +34,5 @@ function Set-WinAutoLogon {
     $RegPath = "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
     New-ItemProperty -Path $RegPath -Name DefaultUserName -Value $UserName -PropertyType String | Out-Null
     New-ItemProperty -Path $RegPath -Name DefaultPassword -Value $Password -PropertyType String | Out-Null
-    New-ItemProperty -Path $RegPath -Name AutoAdminLogon -Value 1 -PropertyType DWord | Out-Null
+    New-ItemProperty -Path $RegPath -Name AutoAdminLogon -Value 1 -PropertyType String | Out-Null
 }
