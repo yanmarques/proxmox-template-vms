@@ -18,7 +18,8 @@ function Start-ElevatedPS {
         -ArgumentList $Arguments `
         -Credential $Credential `
         -RedirectStandardOutput $OutFile `
-        -RedirectStandardError $ErrFile
+        -RedirectStandardError $ErrFile `
+        -Wait
 }
 
 function Set-AdminLocalPassword {
