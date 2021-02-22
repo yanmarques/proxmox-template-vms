@@ -1,6 +1,13 @@
+param (
+    [Parameter(Mandatory)] $UserPath
+)
+
+Write-Output "[+] Fetching disks"
+
 # fetch every disk
 $disks = Get-Disk
-$disks
+
+Write-Output $disks
 
 # ensure we are on a template-based vm
 if ($disks.Count -lt 2) {
@@ -32,7 +39,7 @@ $directory = $winVolume.Name
 
 # calculate some file paths
 $usersDir = Join-Path -Path $directory -ChildPath Users
-$userFromPath = Split-Path -Path $userPath -Leaf
+$userFromPath = Split-Path -Path $UserPath -Leaf
 $rwUserDir = Join-Path -Path $usersDir -ChildPath $userFromPath
 
 $configDir = Join-Path -Path $directory -ChildPath Config
@@ -52,8 +59,8 @@ if ($isRaw) {
     # /E - copy directories and subdirectories
     # /C - continue even when something failed
     # /Q - quiet
-    #Invoke-Command -ScriptBlock {xcopy $userPath $rwUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
-    Copy-Item -Path $userPath -Destination $rwUserDir -Recurse
+    #Invoke-Command -ScriptBlock {xcopy $UserPath $rwUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
+    Copy-Item -Path $UserPath -Destination $rwUserDir -Recurse
 
     # create config directory
     New-Item -Path $configDir -ItemType Directory
@@ -63,16 +70,16 @@ if ($isRaw) {
 }
 
 # maybe remove user directory
-if (Test-Path -Path $userPath) {
+if (Test-Path -Path $UserPath) {
     # first remove all subdirectories and files 
-    Get-ChildItem -Path $userPath -Recurse | Remove-Item -Recurse -Force
+    Get-ChildItem -Path $UserPath -Recurse | Remove-Item -Recurse -Force
     
     # then remove the actual user directory
-    Remove-Item -Path $userPath -Recurse -Force
+    Remove-Item -Path $UserPath -Recurse -Force
 }
 
 # create symbolic link to user directory
-New-Item -ItemType SymbolicLink -Path $userPath -Target $rwUserDir -Force
+New-Item -ItemType SymbolicLink -Path $UserPath -Target $rwUserDir -Force
 
 # run user startup script
 Invoke-Command -FilePath $startupFile

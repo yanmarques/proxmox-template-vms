@@ -3,6 +3,8 @@ param (
     [String] $userPath='C:\Users\Administrator'
 )
 
+Import-Module ./Auth.psm1
+
 # try to obtain default script from PowerShell variables
 if ($script -eq $null) {
     $script = Join-Path -Path $PSScriptRoot -ChildPath start-templated-vm.ps1
@@ -74,12 +76,12 @@ function RegisterGPOStartupScript {
 RegisterGPOStartupScript "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0"
 RegisterGPOStartupScript -SetIsPowershell $false "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0"
 
-Write-Output ("[+] Removing permission against system files at {0}" -f $userPath)
-
-# remove deny permissions over hidden files and subdirectories
-# because there is no security justification with this sort of restriction,
-# this should not harm at all
-$icacls = (Get-Command icacls).Source
-& $icacls $userPath /T /C /remove:d Everyone | Out-Null
+# ensure local account exists
+if (Get-LocalUser -Name $UserName) {
+    Write-Output "[+] Local account already exists"
+} else {
+    New-LocalUser -Name $UserName -Password $SecurePassword
+    Write-Output "[+] Local account was created with success"
+}
 
 Write-Output "[+] Done"

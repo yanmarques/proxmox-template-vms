@@ -1,18 +1,20 @@
 param (
-    [Parameter(Mandatory)] $userPath
+    [Parameter(Mandatory)] $UserPath
 )
 
-$username = 'Administrator'
-$password = 'password'
+function PathName-Of {
+    param (
+        [String] $File
+    )
 
-$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword
+    Join-Path -Path $PSScriptRoot -ChildPath $File
+}
+
+$AuthModule = PathName-Of "Auth.psm1"
+Import-Module $AuthModule
 
 $logFile = "C:\Temp\templated.log"
 
-# send error and output to log files
-Start-Process powershell.exe `
-    -Arguments "C:\Program Files\proxmox-template-vms\windows\entrypoint.ps1 $userPath" `
-    -Credential $credential `
-    -RedirectStandardOutput $logFile `
-    -RedirectStandardError $logFile
+$Entrypoint = PathName-Of "entrypoint.ps1"
+Start-ElevatedPS -Arguments "$Entrypoint -UserPath $UserPath" `
+    -OutputFile $logFile
