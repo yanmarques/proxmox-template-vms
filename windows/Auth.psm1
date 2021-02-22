@@ -7,7 +7,7 @@ $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
 function Start-ElevatedPS {
     param (
         [Parameter(Mandatory)] $Arguments,
-        [Parameter(Mandatory)] $OutFile
+        [Parameter(Mandatory)] $OutFile,
         [Parameter(Mandatory)] $ErrFile,
     )
 
