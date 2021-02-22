@@ -27,4 +27,5 @@ function Get-LocalAccount {
 
 function Add-LocalAccount {
     New-LocalUser -Name $UserName -Password $SecurePassword | Out-Null
+    Add-LocalGroupMember -Group "Administrators" -Member $UserName
 }
