@@ -1,5 +1,5 @@
 # Global settings
-$UserName = 'TemplatedLocalAccount'
+$UserName = 'TemplatedLocalAcct'
 $Password = 'p4ssw0rd'
 
 $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
@@ -20,10 +20,10 @@ function Start-ElevatedPS {
         -RedirectStandardError $OutputFile
 }
 
-function LocalAccount-Exists {
+function Get-LocalAccount {
     Get-LocalUser -Name $UserName
 }
 
-function Create-LocalAccount {
+function Add-LocalAccount {
     New-LocalUser -Name $UserName -Password $SecurePassword
 }

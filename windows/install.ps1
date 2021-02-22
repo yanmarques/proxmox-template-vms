@@ -77,10 +77,10 @@ RegisterGPOStartupScript "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group 
 RegisterGPOStartupScript -SetIsPowershell $false "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0"
 
 # ensure local account exists
-if (LocalAccount-Exists) {
+if (Get-LocalAccount) {
     Write-Output "[+] Local account already exists"
 } else {
-    Create-LocalAccount
+    Add-LocalAccount
     Write-Output "[+] Local account was created with success"
 }
 
