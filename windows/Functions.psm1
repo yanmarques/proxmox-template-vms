@@ -60,8 +60,8 @@ function Start-Templated {
         # /E - copy directories and subdirectories
         # /C - continue even when something failed
         # /Q - quiet
-        #Invoke-Command -ScriptBlock {xcopy $UserPath $rwUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
-        Copy-Item -Path $UserPath -Destination $rwUserDir -Recurse
+        Invoke-Command -ScriptBlock {xcopy $UserPath $rwUserDir /EXCLUDE:$tempExclude /I /H /E /C /Q}
+        #Copy-Item -Path $UserPath -Destination $rwUserDir -Recurse
 
         # create config directory
         New-Item -Path $configDir -ItemType Directory
