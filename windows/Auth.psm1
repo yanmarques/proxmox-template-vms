@@ -21,9 +21,9 @@ function Start-ElevatedPS {
 }
 
 function Get-LocalAccount {
-    Get-LocalUser -Name $UserName
+    Get-LocalUser -Name $UserName > $null 2>&1
 }
 
 function Add-LocalAccount {
-    New-LocalUser -Name $UserName -Password $SecurePassword
+    New-LocalUser -Name $UserName -Password $SecurePassword | Out-Null
 }
