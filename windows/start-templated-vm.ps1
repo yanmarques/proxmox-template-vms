@@ -7,7 +7,7 @@ function PathName-Of {
         [String] $File
     )
 
-    Join-Path -Path $PSScriptRoot -ChildPath $File
+    Join-Path -Path "C:\Program Files\proxmox-template-vms\windows" -ChildPath $File
 }
 
 $AuthModule = PathName-Of "Auth.psm1"
