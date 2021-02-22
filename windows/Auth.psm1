@@ -19,3 +19,11 @@ function Start-ElevatedPS {
         -RedirectStandardOutput $OutputFile `
         -RedirectStandardError $OutputFile
 }
+
+function LocalAccount-Exists {
+    Get-LocalUser -Name $UserName
+}
+
+function Create-LocalAccount {
+    New-LocalUser -Name $UserName -Password $SecurePassword
+}

@@ -3,7 +3,7 @@ param (
     [String] $userPath='C:\Users\Administrator'
 )
 
-Import-Module ./Auth.psm1
+Import-Module .\Auth.psm1
 
 # try to obtain default script from PowerShell variables
 if ($script -eq $null) {
@@ -77,10 +77,10 @@ RegisterGPOStartupScript "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group 
 RegisterGPOStartupScript -SetIsPowershell $false "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0"
 
 # ensure local account exists
-if (Get-LocalUser -Name $UserName) {
+if (LocalAccount-Exists) {
     Write-Output "[+] Local account already exists"
 } else {
-    New-LocalUser -Name $UserName -Password $SecurePassword
+    Create-LocalAccount
     Write-Output "[+] Local account was created with success"
 }
 
