@@ -8,7 +8,7 @@ function Start-ElevatedPS {
     param (
         [Parameter(Mandatory)] $Arguments,
         [Parameter(Mandatory)] $OutFile,
-        [Parameter(Mandatory)] $ErrFile,
+        [Parameter(Mandatory)] $ErrFile
     )
 
     $Credential = New-Object System.Management.Automation.PSCredential $UserName, $SecurePassword
