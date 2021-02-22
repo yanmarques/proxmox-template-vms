@@ -10,7 +10,10 @@ function PathName-Of {
     Join-Path -Path "C:\Program Files\proxmox-template-vms\windows" -ChildPath $File
 }
 
+Write-Output "pre-starting templated-vm" > $OutFile
+
 $AuthModule = PathName-Of "Auth.psm1"
+Write-Output "importing module: $AuthModule" > $OutFile
 Import-Module $AuthModule
 
 $OutFile = "C:\Temp\templated.out.log"
