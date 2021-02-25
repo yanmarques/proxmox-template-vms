@@ -1,4 +1,4 @@
-from templated.vars import hooks_path
+from templated.settings import hooks_path
 from setuptools import setup, find_packages
 from setuptools.command import install
 

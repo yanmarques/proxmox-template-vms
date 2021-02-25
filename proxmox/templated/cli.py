@@ -1,10 +1,11 @@
 from .hook import MachineEventDispatcher
 from .manager import MachineConfigManager
-from .vars import var_dir
+from .settings import var_dir
 from .utils import (
     path_name_of,
     setup_hook_logging,
     setup_console_logging,
+    create_directories,
     logger,
 )
 
@@ -40,9 +41,7 @@ def initialize():
         path_name_of('config')
     ]
 
-    # ensure directories exists
-    for directory in directories:
-        os.makedirs(directory, mode=0o755, exist_ok=True)
+    create_directories(directories, mode=0o755)
 
 
 def main():

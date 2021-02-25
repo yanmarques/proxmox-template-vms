@@ -1,6 +1,6 @@
 from .client import Machine
 from .utils import logger
-from .vars import hooks_storage    
+from .settings import hooks_storage    
 
 
 class MachineConfigManager:

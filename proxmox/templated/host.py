@@ -1,5 +1,5 @@
 from .client import Machine
-from .vars import node, templated_disk_uuid
+from .settings import node, templated_disk_uuid
 from .utils import call, logger
 
 import tempfile

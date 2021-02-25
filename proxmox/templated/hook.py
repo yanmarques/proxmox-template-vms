@@ -1,7 +1,7 @@
 from .client import Machine
 from .config import ConfigIOInterface
 from .host import HostDeviceFormatter, HostDeviceSeeder
-from .vars import node
+from .settings import node
 from .utils import (
     call,
     find_pvesh_value,

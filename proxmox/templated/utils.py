@@ -1,4 +1,4 @@
-from .vars import node, log_file, var_dir
+from .settings import node, log_file, var_dir
 
 import subprocess
 import logging
@@ -116,7 +116,19 @@ def setup_console_logging():
 
 
 def format_size_to_int(size):
-    # see https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
+    '''
+    Size string to integer value. Only supports until "T" terabytes tag.
+    
+    Based on
+    @see https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
+    
+    Ie.:
+    >>> assert format_size_to_int('1') == 1
+    >>> kbytes = format_size_to_int('1K')
+    >>> kbytes
+    1024
+    >>> assert format_size_to_int('1M') == kbytes**2
+    '''
 
     power = 2**10
     power_labels = {'': 0, 'K': 1, 'M': 2, 'G': 3, 'T': 4}
@@ -131,3 +143,12 @@ def format_size_to_int(size):
         total *= power
         power_of -= 1
     return total
+
+
+def create_directories(directories, **kwargs):
+    '''
+    Ensure directory in list exists
+    '''
+
+    for directory in directories:
+        os.makedirs(directory, **kwargs)

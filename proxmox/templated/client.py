@@ -1,5 +1,5 @@
 from .config import ConfigIOInterface
-from .vars import lvm_storage
+from .settings import lvm_storage
 from .utils import (
     pvesh,
     try_call,
