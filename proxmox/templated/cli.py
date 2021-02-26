@@ -1,4 +1,5 @@
-from .hook import MachineEventDispatcher
+from .hook import MachineHandler
+from .event import Dispatcher, EventNotExists
 from .manager import MachineConfigManager
 from .settings import var_dir
 from .utils import (
@@ -19,8 +20,24 @@ def to_hook(vmid, event):
 
     setup_hook_logging(vmid)
 
-    dispatcher = MachineEventDispatcher(vmid)
-    return dispatcher.dispatch(event)
+    dispatcher = Dispatcher()
+    book_handler = MachineHandler(vmid, dispatcher=dispatcher)
+
+    dispatcher.restrict_event('pre-start', 
+                              book_handler.on_pre_start)
+
+    dispatcher.restrict_event('post-stop', 
+                              book_handler.on_post_stop)
+
+    try:
+        return dispatcher.dispatch(event) or 0
+    except EventNotExists as event_exc:
+        logger.warn(str(event_exc))
+    except Exception as exc:
+        logger.exception(str(exc), exc)
+        return 1
+
+    return 0
 
 
 def process_request(arguments):
