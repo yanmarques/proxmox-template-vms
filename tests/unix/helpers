@@ -1,13 +1,14 @@
 #!/bin/sh
 
 # shellcheck shell=bash
+# shellcheck disable=SC2154
 
 not_empty() {
     [ -n "${not_empty:?}" ]
 }
 
 mounted() {
-    df --output='target' | grep "^${mounted:?}$" 2> /dev/null
+    mountpoint "$mounted"
 }
 
 has_default_rw_files() {

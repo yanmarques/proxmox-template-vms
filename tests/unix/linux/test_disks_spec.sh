@@ -2,8 +2,23 @@
 
 Include ./tests/unix/linux/functions
 
-Describe "format_disk_when_raw()"
-    It 'formats the disk'
+Describe "prepare_disk_when_raw()"
+    It 'create filesystem'
+        has_filesystem() {
+            dumpe2fs "$1" > /dev/null 2>&1
+        }
+
+        # shellcheck disable=SC2154
+        When call with_raw_disk_formated
+        The status should eq 0
+        The output should not include failed
+
+        # shellcheck disable=SC2154
+        Assert has_filesystem "$test_disk"
+    End
+
+    It 'not raw disk after preparation'
+        # shellcheck disable=SC2154
         When call with_raw_disk_formated
         The status should eq 0
         The output should not include failed
@@ -14,21 +29,14 @@ Describe "format_disk_when_raw()"
         Before "with_raw_disk_formated"
 
         It "does not format the disk"
+            Mock mkfs.ext4
+                exit 255
+            End
+
             When call with_raw_disk_formated
+            The status should eq 0
             The entire output should eq ''
         End
-    End
-
-    It 'fails with format error code'
-        # fake a sfdisk error 
-        sfdisk() {
-            return 1
-        }
-
-        When call with_raw_disk_formated
-
-        # shellcheck disable=SC2154
-        The status should eq "$format_disk_err"
     End
 
     It 'fails with fs error code'
@@ -41,7 +49,7 @@ Describe "format_disk_when_raw()"
 
         # shellcheck disable=SC2154
         The status should eq "$file_system_err"
-        The output should not include failed
+        The stderr should include failed
     End
 End
 
@@ -65,15 +73,10 @@ End
 
 Describe "start_disk()" mount_mock
     Context "when format and mount a dummy disk"
-        setup_rw_device() {
-            # shellcheck disable=SC2154
-            start_disk "$test_disk" -B "$test_disk" \
-                --format-opts "$default_mkfs_opts" \
-                --mount-opts "$default_loop_mount_opts" > /dev/null 2>&1
-        }
-
         It "formats and mounts"
-            When call setup_rw_device
+            When call start_disk "$test_disk"
+            The status should eq 0
+            The output should not include failed
             The variable rw_dir should satisfy mounted
         End
 
@@ -83,7 +86,9 @@ Describe "start_disk()" mount_mock
                 return 1
             }
 
-            When call setup_rw_device
+            When call start_disk "$test_disk"
+            The output should not include failed
+            The stderr should include failed
             
             # shellcheck disable=SC2154
             The status should eq "$mount_err"

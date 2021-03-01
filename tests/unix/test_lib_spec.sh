@@ -74,14 +74,12 @@ End
 Describe "ensure_formated_and_mounted()"
     unset TEMPLATED_DEV
 
-    start_disk_from_partition() {
+    find_device_by_uuid() {
         echo "$@"
-        return 11
     }
 
     start_disk() {
         echo "$@"
-        return 22
     }
 
     detect_partition() {
@@ -146,24 +144,22 @@ Describe "ensure_formated_and_mounted()"
         End
     End
 
-    It "calls start_from_partition() with uuid"
+    It "calls start_disk() with device from find_device_by_uuid"
         detect_partition() {
             echo some-uuid
         }
 
         When call ensure_formated_and_mounted
-        The status should eq 11
         The output should eq "some-uuid"
     End
 
     It "calls start_disk() with raw device"
         detect_raw_disk() {
-            echo test-device
+            echo raw-device
         }
 
         When call ensure_formated_and_mounted
-        The status should eq 22
-        The output should eq "test-device -B test-device1"
+        The output should eq "raw-device"
     End
 
     It "call partition to format when raw disk also present"
@@ -176,7 +172,6 @@ Describe "ensure_formated_and_mounted()"
         }
 
         When call ensure_formated_and_mounted
-        The status should eq 11
         The output should eq "some-uuid"
     End
 
@@ -187,17 +182,16 @@ Describe "ensure_formated_and_mounted()"
         }
 
         detect_raw_disk() {
-            echo test-device
+            echo raw-device
         }
 
         When call ensure_formated_and_mounted
-        The status should eq 22
-        The output should eq "test-device -B test-device1"
+        The output should eq "raw-device"
     End
 
     It "ignore many disks when has partition"
         detect_partition() {
-            echo test-partition
+            echo some-uuid
         }
 
         detect_raw_disk() {
@@ -206,8 +200,7 @@ Describe "ensure_formated_and_mounted()"
         }
 
         When call ensure_formated_and_mounted
-        The status should eq 11
-        The output should eq "test-partition"
+        The output should eq "some-uuid"
     End
 
     It "calls start_disk() from environment"
@@ -219,7 +212,6 @@ Describe "ensure_formated_and_mounted()"
         }
 
         When call start_with_templated_dev
-        The status should eq 22             
         The output should eq "templated-test"
 
     End

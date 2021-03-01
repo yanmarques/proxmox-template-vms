@@ -23,27 +23,19 @@ is_raw_disk() {
     [ "$?" -eq 2 ]
 }
 
-format_linux_disk() {
-	# create MBR partition table and one partition with the whole disk
-	# of the type 83 in hexcode, which means Linux type
-	echo 'type=83' | sfdisk "$1" > /dev/null
-}
+make_filesystem() {
+	local device
+	device="${1:?}"
 
-make_silent_ext4_fs() {
-	# no reserved privileged blocks (-m 0)
+	# no reserved blocks for privileged proccesses (-m 0)
 	# with journaling (-j)
 	# quiet (-q)
-	mkfs.ext4 -m 0 -j -q "$@"
+	mkfs.ext4 -m 0 -j -q "$device"
 }
 
-format_disk_when_raw() {
-	local block_dev block_dev_partition
+prepare_disk_when_raw() {
+	local block_dev
 	block_dev="${1:?}"
-	block_dev_partition="${2:?}"
-
-	# allow all other arguments be passed to mkfs.ext4
-	shift
-	shift
 
 	# is the block device already formatted?
 	# no, so format it and configure it's contents
@@ -51,14 +43,9 @@ format_disk_when_raw() {
 		return 0
 	fi
 
-	# shellcheck disable=SC2154
-	exec_log "format block device" format_linux_disk "$block_dev" || \
-		return "$format_disk_err"
-
 	# create an ext4 file system on the created partition
 	# shellcheck disable=SC2154
-	exec_log "create fs on partition" \
-		make_silent_ext4_fs "$@" "$block_dev_partition" || \
+	exec_log "create fs on device" make_filesystem "$block_dev" || \
 		return "$file_system_err"
 }
 
@@ -71,39 +58,16 @@ fix_ext4_fs() {
 }
 
 start_disk() {
-	local block_dev block_dev_partition format_opts mount_opts
+	local block_dev
 
 	# block device path
 	block_dev="${1:?}"
-	shift
-	
-	# default path to disk partition
-	block_dev_partition="$block_dev"
-
-	while [[ "$1" == -* ]]; do
-		case "$1" in
-			-B)
-				block_dev_partition="$2"
-				;;
-			--format-opts)
-				format_opts="$2"
-				;;
-			--mount-opts)
-				mount_opts="$2"
-				;;
-			*) ;;
-		esac
-
-		shift
-		shift
-	done
 	
 	# shellcheck disable=2086
-	format_disk_when_raw "$block_dev" \
-		"$block_dev_partition" ${format_opts} || return
+	prepare_disk_when_raw "$block_dev" || return
 
 	# device mgmt
-	fix_ext4_fs "$block_dev_partition" || return
+	fix_ext4_fs "$block_dev" || return
 
 	# ensure mountpoiunt exists then mount
 	# shellcheck disable=SC2154
@@ -113,7 +77,7 @@ start_disk() {
 	# shellcheck disable=2086
 	# shellcheck disable=SC2154
 	exec_log "mount device" \
-		mount ${mount_opts} "$block_dev_partition" "$rw_dir" || \
+		mount "$block_dev" "$rw_dir" || \
 		return "$mount_err"
 }
 
@@ -147,10 +111,23 @@ start_disk_from_partition() {
 }
 
 find_device_by_uuid() {
-	local uuid
+	local uuid status_code
 	uuid="${1:?}"
 
-	blkid --uuid="$uuid"
+	disk=$(blkid --uuid="$uuid")
+	status_code="$?"
+	
+	if [ "$status_code" -eq 0 ]; then
+		echo "$disk"
+		return 0
+	fi
+
+	if [ "$status_code" -eq 2 ]; then
+		err "no such partition: $uuid"
+		return 2
+	fi
+
+	return "$status_code"
 }
 
 detect_partition() {

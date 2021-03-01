@@ -7,17 +7,7 @@ TEMPLATED_DEV=/dev/null
 # shellcheck disable=SC1091
 . ./unix/linux/functions
 
-# default first partition offset
-default_part_offset=$(( 2048 * 512 ))
-
-# default mkfs.ext4 dummy disk format
-default_mkfs_opts="-F -E offset=$default_part_offset"
-
-# default mount options to mount dummy disk
-default_loop_mount_opts="-o rw,loop,offset=$default_part_offset"
-
 with_raw_disk_formated() {
-    # shellcheck disable=SC2086,SC2154
-    format_disk_when_raw "$test_disk" "$test_disk" \
-        ${default_mkfs_opts} 2> /dev/null
+    # shellcheck disable=SC2154
+    prepare_disk_when_raw "$test_disk"   
 }

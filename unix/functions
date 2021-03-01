@@ -243,7 +243,7 @@ ensure_formated_and_mounted() {
 	env_device="${TEMPLATED_DEV}"
 
 	if [ -n "$env_device" ]; then
-		start_disk "$env_device" "$@"
+		start_disk "$env_device"
 		return
 	fi
 
@@ -279,12 +279,16 @@ ensure_formated_and_mounted() {
 	# this is a must, because one should be able to start a template-based 
 	# vm with just some raw disk and it ignores these raw disks
 	if $uuid_valid; then
-		start_disk_from_partition "$uuid" "$@"
-		return
+		# ensure uuid is valid just getting the device path 
+		disk="$(find_device_by_uuid "$uuid")"
+		if [ -z "$disk" ]; then
+			err "no such partition: $uuid"
+			return 1
+		fi
 	fi
 	
 	# disk is raw, will use the first partition
-	start_disk "$disk" -B "$disk"1 "$@"
+	start_disk "$disk"
 }
 
 mount_host_data() {
