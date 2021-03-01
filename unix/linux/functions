@@ -30,7 +30,10 @@ format_linux_disk() {
 }
 
 make_silent_ext4_fs() {
-	mkfs.ext4 "$@" > /dev/null
+	# no reserved privileged blocks (-m 0)
+	# with journaling (-j)
+	# quiet (-q)
+	mkfs.ext4 -m 0 -j -q "$@"
 }
 
 format_disk_when_raw() {
@@ -57,6 +60,14 @@ format_disk_when_raw() {
 	exec_log "create fs on partition" \
 		make_silent_ext4_fs "$@" "$block_dev_partition" || \
 		return "$file_system_err"
+}
+
+fix_ext4_fs() {
+	local device
+	device="${1:?}"
+
+	# try to fix file system
+	exec_log "private device mgmt" fsck.ext4 -p "$device"
 }
 
 start_disk() {
@@ -90,6 +101,9 @@ start_disk() {
 	# shellcheck disable=2086
 	format_disk_when_raw "$block_dev" \
 		"$block_dev_partition" ${format_opts} || return
+
+	# device mgmt
+	fix_ext4_fs "$block_dev_partition" || return
 
 	# ensure mountpoiunt exists then mount
 	# shellcheck disable=SC2154
