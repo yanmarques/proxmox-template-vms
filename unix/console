@@ -18,6 +18,8 @@ start_exec() {
 
     exec_log "receiving host" mount_host_data || return
 
+    exec_log "calling host info hooks" handle_host_info || return
+
     is_template_vm && info 'inside a template vm, exiting' && return 0
 
 	exec_log "formats and mounts disk partition" \

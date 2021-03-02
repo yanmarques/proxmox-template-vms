@@ -130,3 +130,10 @@ mount_strategy() {
 
 	mount ${mnt_opts} "$src" "$target"
 }
+
+set_hostname() {
+	local name
+	name="${1:?}"
+
+	hostnamectl set-hostname "$name"
+}

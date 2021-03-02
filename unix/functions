@@ -347,6 +347,19 @@ mount_host_data() {
 		return "$mount_err"
 }
 
+host_info_hook() {
+	:
+}
+
+handle_host_info() {
+	if [ -f "$runtime_dir"/hostname ]; then
+		exec_log "setting vm hostname" \
+			set_hostname "$(< "$runtime_dir"/hostname)" || return
+	fi
+
+	exec_log "calling custom host info hook" host_info_hook || return 
+}
+
 is_template_vm() {
 	[ -f "$runtime_dir"/template-vm ]
 }
