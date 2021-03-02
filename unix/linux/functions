@@ -1,9 +1,5 @@
 #!/bin/bash
 
-list_scsi_disks() {
-	lsblk --output PATH --scsi | sed 1d
-}
-
 list_part_uuids() {
 	lsblk --output TYPE,UUID --exclude 252 | \
 		grep '^part[[:space:]]' | awk '{print $2}'
