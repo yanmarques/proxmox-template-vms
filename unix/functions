@@ -22,7 +22,7 @@ base_home_dir=${base_home_dir%/}
 
 # default binary used on rc script
 default_binary=${TEMPLATED_BINARY:-/bin/bash}
-default_binary=${base_home_dir%/}
+default_binary=${default_binary%/}
 
 # default runtime path where host data is stored
 runtime_dir=${TEMPLATED_RUNTIME_DIR:-/var/run/proxmox-templated-vms}
