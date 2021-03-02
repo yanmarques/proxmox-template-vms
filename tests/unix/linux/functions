@@ -11,3 +11,18 @@ with_raw_disk_formated() {
     # shellcheck disable=SC2154
     prepare_disk_when_raw "$test_disk"   
 }
+
+filesystem_bsize() {
+    dumpe2fs -h "${1:?}" |& awk -F: '/Block count/{count=$2} /Block size/{size=$2} END{print count*size}'
+}
+
+grow_raw_file() {
+    local file size
+    file="${1:?}"
+    size="${2:?}"
+
+    dd if=/dev/zero of="$file" bs="$size" count=1 \
+        oflag=append conv=notrunc > /dev/null 2>&1
+
+    sync
+}

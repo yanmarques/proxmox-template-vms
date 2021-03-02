@@ -96,3 +96,26 @@ Describe "mount_strategy()"
     End
 
 End
+
+Describe "check_filesystem()"
+    It "resizes filesystem to new device size"
+        fs_is_resized() {
+            make_filesystem "$test_disk"
+
+            # get filesystem bytes count
+            old_size="$(filesystem_bsize "$test_disk")"
+
+            # increase 1M of disk size
+            grow_raw_file "$test_disk" 1M
+
+            expected_size="$(( old_size + 1024 ** 2 ))"
+            %preserve expected_size
+
+            check_filesystem "$test_disk" 2> /dev/null
+
+            [ "$(filesystem_bsize "$test_disk")" -eq "$expected_size" ]
+        }
+
+        Assert fs_is_resized
+    End 
+End
