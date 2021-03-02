@@ -33,52 +33,16 @@ make_filesystem() {
 	mkfs.ext4 -m 0 -j -q "$device"
 }
 
-prepare_disk_when_raw() {
-	local block_dev
-	block_dev="${1:?}"
-
-	# is the block device already formatted?
-	# no, so format it and configure it's contents
-	if ! is_raw_disk "$block_dev"; then
-		return 0
-	fi
-
-	# create an ext4 file system on the created partition
-	# shellcheck disable=SC2154
-	exec_log "create fs on device" make_filesystem "$block_dev" || \
-		return "$file_system_err"
-}
-
-fix_ext4_fs() {
+check_filesystem() {
 	local device
 	device="${1:?}"
 
 	# try to fix file system
-	exec_log "private device mgmt" fsck.ext4 -p "$device"
-}
+	exec_log "private device mgmt" \
+		fsck.ext4 -f -p "$device" || return
 
-start_disk() {
-	local block_dev
-
-	# block device path
-	block_dev="${1:?}"
-	
-	# shellcheck disable=2086
-	prepare_disk_when_raw "$block_dev" || return
-
-	# device mgmt
-	fix_ext4_fs "$block_dev" || return
-
-	# ensure mountpoiunt exists then mount
-	# shellcheck disable=SC2154
-	mkdir -p "$rw_dir"
-
-	# mount device disk on rw directory
-	# shellcheck disable=2086
-	# shellcheck disable=SC2154
-	exec_log "mount device" \
-		mount "$block_dev" "$rw_dir" || \
-		return "$mount_err"
+	# grow fs
+	exec_log "grow file system" resize2fs "$device"
 }
 
 uninstalled_partitions() {
@@ -88,26 +52,6 @@ uninstalled_partitions() {
 		# keep the ones which are not in fstab
 		! grep "$uuid" /etc/fstab > /dev/null && echo "$uuid"
 	done
-}
-
-start_disk_from_partition() {
-	local device uuid ptuuid dev_part
-	uuid="${1:?}"
-
-	# ensure uuid is valid just getting the device path 
-	dev_part="$(find_device_by_uuid "$uuid")"
-	if [ "$?" -eq 2 ]; then
-		err "no such device: $uuid"
-		return 2
-	fi
-
-	# extract ptuuid from uuid
-	ptuuid="$(lsblk --output UUID,PTUUID | grep "^$uuid" | awk '{print $2}')"
-
-	# extract the first device path from ptuuid
-	device="$(lsblk --output PTUUID,PATH | grep -m 1 "^$ptuuid" | awk '{print $2}')"
-
-	start_disk "$device" -B "$dev_part" "$@"
 }
 
 find_device_by_uuid() {

@@ -218,6 +218,46 @@ local_bind_file_object() {
 		mount_strategy "$real_path" "$target_file"
 }
 
+prepare_disk_when_raw() {
+	local block_dev
+	block_dev="${1:?}"
+
+	# is the block device already formatted?
+	# no, so format it and configure it's contents
+	if ! is_raw_disk "$block_dev"; then
+		return 0
+	fi
+
+	# create an ext4 file system on the created partition
+	# shellcheck disable=SC2154
+	exec_log "create fs on device" make_filesystem "$block_dev" || \
+		return "$file_system_err"
+}
+
+start_disk() {
+	local block_dev
+
+	# block device path
+	block_dev="${1:?}"
+	
+	# shellcheck disable=2086
+	prepare_disk_when_raw "$block_dev" || return
+
+	# device mgmt
+	check_filesystem "$block_dev" || return
+
+	# ensure mountpoiunt exists then mount
+	# shellcheck disable=SC2154
+	mkdir -p "$rw_dir"
+
+	# mount device disk on rw directory
+	# shellcheck disable=2086
+	# shellcheck disable=SC2154
+	exec_log "mount device" \
+		mount "$block_dev" "$rw_dir" || \
+		return "$mount_err"
+}
+
 mount_user_home_dir() {
 	mount_strategy "$(rw_base_home)" "$base_home_dir"
 }

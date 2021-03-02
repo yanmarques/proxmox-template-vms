@@ -351,3 +351,109 @@ Describe "bind_files()" current
         Assert backup_foo_file
     End
 End
+
+Describe "start_disk()"
+    prepare_disk_when_raw() {
+        :
+    }
+
+    check_filesystem() {
+        :
+    }
+
+    mount() {
+        :
+    }
+
+    It "fails on prepare_disk_when_raw()"
+        prepare_disk_when_raw() {
+            return 123
+        }
+
+        # shellcheck disable=SC2154
+        When call start_disk "$test_disk"
+        The status should eq 123
+    End
+
+    It "fails on check_filesystem()"
+        check_filesystem() {
+            return 123
+        }
+
+        # shellcheck disable=SC2154
+        When call start_disk "$test_disk"
+        The status should eq 123
+    End
+
+    It "mounts with rw_dir"
+        mount() {
+            echo "$2"
+        }
+
+        # shellcheck disable=SC2154
+        When call start_disk "$test_disk"
+        The status should eq 0
+
+        # shellcheck disable=SC2154
+        The output should start with "$rw_dir"
+    End
+
+    It "fails with mount error status code"
+        # fake mount error
+        mount() {
+            return 1
+        }
+
+        When call start_disk "$test_disk"
+        The output should not include failed
+        The stderr should include failed
+        
+        # shellcheck disable=SC2154
+        The status should eq "$mount_err"
+    End
+End
+
+Describe "prepare_disk_when_raw()"
+    with_disk_prepared() {
+        prepare_disk_when_raw "$test_disk"
+    }
+
+    is_raw_disk() {
+        :
+    }
+
+    check_filesystem() {
+        :
+    }
+
+    Context 'when not raw'
+        Before "with_disk_prepared"
+
+        is_raw_disk() {
+            return 1
+        }
+
+        It "does not format the disk"
+            Mock mkfs.ext4
+                exit 255
+            End
+
+            When call with_disk_prepared
+            The status should eq 0
+            The entire output should eq ''
+        End
+    End
+
+    It 'fails with fs error code'
+        # fake a mkfs error
+        Mock mkfs.ext4
+            exit 1
+        End
+
+        When call with_disk_prepared
+
+        # shellcheck disable=SC2154
+        The status should eq "$file_system_err"
+        The stderr should include failed
+    End
+End
