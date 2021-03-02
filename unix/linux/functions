@@ -45,7 +45,7 @@ uninstalled_partitions() {
 	for uuid in $(list_part_uuids | grep -v "$templated_disk_uuid"); do
 
 		# keep the ones which are not in fstab
-		! grep "$uuid" /etc/fstab > /dev/null && echo "$uuid"
+		grep "^UUID=$uuid" /etc/fstab > /dev/null || echo "$uuid"
 	done
 }
 
