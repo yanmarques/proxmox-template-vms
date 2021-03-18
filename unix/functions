@@ -79,7 +79,7 @@ rw_base_home() {
 
 fill_skeleton_directory() {
 	# shellcheck disable=SC2154
-	cp -a "$skel_dir" "$(rw_base_home)"/"$user"
+	cp -ar "$skel_dir" "$(rw_base_home)"/"$user"
 }
 
 fix_user_dir_permission() {

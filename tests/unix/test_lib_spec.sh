@@ -21,6 +21,24 @@ Describe "populate_home_dir()"
             Assert is_owner "$user" "$(rw_base_home)"/"$user"/dummy-file
         End
     End
+
+    Context
+        touch_artifact_inner_directory() {
+            mkdir "$skel_dir"/foo
+            touch "$skel_dir"/foo/bar
+        }
+
+        Before "touch_artifact_inner_directory"
+
+        It "ensure copy directories recursively"
+            When call populate_home_dir
+            The status should be success
+
+            # shellcheck disable=SC2154
+            The value "$(rw_base_home)"/"$user"/foo/bar should be a file
+            The output should not include failed
+        End
+    End
 End
 
 Describe "setup_vm_user_data()"
