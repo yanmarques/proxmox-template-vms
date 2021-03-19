@@ -28,6 +28,10 @@ default_binary=${default_binary%/}
 runtime_dir=${TEMPLATED_RUNTIME_DIR:-/var/run/proxmox-templated-vms}
 runtime_dir=${runtime_dir%/}
 
+# default local dns file
+# here to help testing stuff
+hosts_file="${TEMPLATED_HOSTS_FILE:-/etc/hosts}"
+
 #################################################
 # Global vars
 #################################################
@@ -351,10 +355,36 @@ host_info_hook() {
 	:
 }
 
+is_running_debian() {
+	[ -e /etc/debian_version ]
+}
+
+replace_local_dns() {
+	# inspired from qubes-core-agent-linux package at init/qubes-early-vm-config.sh
+	## the regex part is simpler but afaik gives the same result
+
+	local hostname ipv4_localhost_re
+	hostname="${1:?}"
+
+	if is_running_debian; then
+		ipv4_localhost_re="127\.0\.1\.1"
+	else
+		ipv4_localhost_re="127\.0\.0\.1"
+	fi
+	
+	sed -i "s/^\($ipv4_localhost_re\(.*\)\)$/\1 ${hostname}/" "$hosts_file"
+    sed -i "s/^\(::1\(.*\)\)$/\1 ${hostname}/" "$hosts_file"
+}
+
 handle_host_info() {
 	if [ -f "$runtime_dir"/hostname ]; then
-		exec_log "setting vm hostname" \
-			set_hostname "$(< "$runtime_dir"/hostname)" || return
+		local name
+		name="$(< "$runtime_dir"/hostname)"
+
+		exec_log "setting vm hostname" set_hostname "$name"  || return
+
+		exec_log "replacing hostname in local dns" \
+			replace_local_dns "$name" || return
 	fi
 
 	exec_log "calling custom host info hook" host_info_hook || return 

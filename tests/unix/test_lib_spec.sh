@@ -475,3 +475,87 @@ Describe "prepare_disk_when_raw()"
         The stderr should include failed
     End
 End
+
+Describe "replace_local_dns" current:test
+    Context "not-debian"
+        create_dummy_hosts() {
+            # shellcheck disable=SC2154
+            cat <<EOF > "$hosts_file"
+127.0.0.1   localhost localhost.localdomain
+::1         localhost localhost.localdomain
+
+9.9.9.9     example.test
+EOF
+        }
+
+        has_hostname() {
+            hostname="${1:?}"
+
+            cmp_file="$(mktemp)"
+            cat <<EOF > "$cmp_file"
+127.0.0.1   localhost localhost.localdomain ${hostname}
+::1         localhost localhost.localdomain ${hostname}
+
+9.9.9.9     example.test
+EOF
+
+            same_contents "$hosts_file" "$cmp_file"
+        }
+
+        Before "create_dummy_hosts"
+        
+        # mocking
+        is_running_debian() {
+            return 1
+        }
+
+        It "uses 127.0.0.1 by default"
+            When call replace_local_dns "foo"
+            The status should be success
+
+            Assert has_hostname "foo"
+        End
+    End
+
+    Context "on-debian"
+        create_dummy_hosts() {
+            # shellcheck disable=SC2154
+            cat <<EOF > "$hosts_file"
+127.0.0.1   localhost localhost.localdomain
+127.0.1.1   old-foo-hostname
+::1         localhost localhost.localdomain
+
+9.9.9.9     example.test
+EOF
+        }
+
+        has_hostname() {
+            hostname="${1:?}"
+
+            cmp_file="$(mktemp)"
+            cat <<EOF > "$cmp_file"
+127.0.0.1   localhost localhost.localdomain
+127.0.1.1   old-foo-hostname ${hostname}
+::1         localhost localhost.localdomain ${hostname}
+
+9.9.9.9     example.test
+EOF
+
+            same_contents "$hosts_file" "$cmp_file"
+        }
+
+        Before "create_dummy_hosts"
+        
+        # mocking
+        is_running_debian() {
+            return 0
+        }
+
+        It "uses 127.0.1.1 by default"
+            When call replace_local_dns "foo"
+            The status should be success
+
+            Assert has_hostname "foo"
+        End
+    End
+End

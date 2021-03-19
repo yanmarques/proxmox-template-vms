@@ -38,9 +38,8 @@ new_skel_dir() {
 }
 
 # set runtime directory as temporary
-new_skel_dir() {
-    register_tmp_dir
-    runtime_dir="$(last_tmp_dir)"
+new_hosts_file() {
+    hosts_file="$(mktemp)"
 }
 
 register_tmp_dir() {
@@ -69,6 +68,7 @@ setup() {
     new_rw_dir
     new_skel_dir
     create_dummy_disk
+    new_hosts_file
 
     # reload runtime vars
     load_runtime_vars
